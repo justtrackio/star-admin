@@ -15,6 +15,10 @@ function Dashboard() {
         {error && <Alert type="error" showIcon title="Backend unavailable" description={error.message} />}
         {data && <Space><Tag color="green">Backend online</Tag><Typography.Text>{data.service}</Typography.Text></Space>}
       </Card>
+      <Card title="Cluster overview">
+        <Typography.Paragraph>See compute node availability, capacity, resource usage, and heartbeat details.</Typography.Paragraph>
+        <Link to="/overview">View cluster overview →</Link>
+      </Card>
       <Card title="Materialized views">
         <Typography.Paragraph>Browse materialized views across the connected cluster's databases, inspect their status, and read their SQL definitions.</Typography.Paragraph>
         <Link to="/materialized-views">View materialized views →</Link>

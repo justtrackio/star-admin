@@ -24,3 +24,27 @@ export interface MaterializedView {
 export interface MaterializedViewsResponse {
   views: MaterializedView[];
 }
+
+export interface ComputeNode {
+  id: string;
+  host: string;
+  alive: boolean | null;
+  decommissioned: boolean;
+  status: string;
+  warehouse: string;
+  cpuCores: number | null;
+  memoryLimit: string;
+  cpuUsed: string;
+  memoryUsed: string;
+  runningQueries: number | null;
+  tablets: number | null;
+  lastStartTime: string;
+  lastHeartbeat: string;
+  version: string;
+  error: string;
+  dataCache: string;
+}
+
+export interface OverviewResponse {
+  nodes: ComputeNode[];
+}

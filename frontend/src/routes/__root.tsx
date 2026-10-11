@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DashboardOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import { DashboardOutlined, CloudServerOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Button, Layout, Menu, Tooltip } from 'antd';
@@ -41,6 +41,12 @@ function RootComponent() {
                 icon: collapsed ? <Link to="/" aria-label="Dashboard"><DashboardOutlined /></Link> : <DashboardOutlined />,
                 label: collapsed ? 'Dashboard' : <Link to="/">Dashboard</Link>,
                 title: 'Dashboard',
+              },
+              {
+                key: '/overview',
+                icon: collapsed ? <Link to="/overview" aria-label="Overview"><CloudServerOutlined /></Link> : <CloudServerOutlined />,
+                label: collapsed ? 'Overview' : <Link to="/overview">Overview</Link>,
+                title: 'Overview',
               },
               {
                 key: '/materialized-views',
