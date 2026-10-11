@@ -1,8 +1,8 @@
 [tools]
 bun = "1.4.3"
-go = "1.27.2"
+go = "1.27.1"
 gofumpt = "0.12.0"
-golangci-lint = "2.14.0"
+golangci-lint = "2.13.1"
 mockery = "3.8.0"
 
 [tasks."ci:backend-lint"]

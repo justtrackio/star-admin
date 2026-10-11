@@ -24,18 +24,23 @@ func TestStarRocksConfiguration(t *testing.T) {
 			if config.IsSet("sqlc.prod") || config.IsSet("sqlc.sdlc") || config.IsSet("starrocks.cluster") {
 				t.Fatal("expected a single default connection without a cluster selector")
 			}
+
 			var err error
 			var settings *sqlc.Settings
+
 			if settings, err = sqlc.ReadSettings(config, "default"); err != nil {
 				t.Fatal(err)
 			}
+
 			expectedUri := sqlc.SettingsUri{Host: tc.host, Port: 9030, User: "root"}
 			if settings.Driver != sqlc.DriverMysql || settings.Uri != expectedUri {
 				t.Fatalf("unexpected connection settings: %+v", settings)
 			}
+
 			if settings.Migrations.Enabled || settings.MultiStatements {
 				t.Fatal("existing cluster must not enable migrations or multi-statements")
 			}
+
 			assertResourceLifecyclesDisabled(t, config)
 		})
 	}
@@ -61,9 +66,11 @@ resource_lifecycles:
     enabled: false
 `), "yml"),
 	}
+
 	if override != "" {
 		options = append(options, cfg.WithConfigBytes([]byte(override), "yml"))
 	}
+
 	if err := config.Option(options...); err != nil {
 		t.Fatal(err)
 	}
@@ -100,10 +107,12 @@ func TestStarRocksPoolClosesOnShutdown(t *testing.T) {
 		client := &closeTrackingClient{err: expected}
 		module := &ModuleStarRocks{client: client}
 		cancel()
+
 		err := module.Run(ctx)
 		if !errors.Is(err, expected) {
 			t.Fatalf("shutdown error = %v, want %v", err, expected)
 		}
+
 		if client.calls != 1 {
 			t.Fatalf("pool closed %d times, want once", client.calls)
 		}

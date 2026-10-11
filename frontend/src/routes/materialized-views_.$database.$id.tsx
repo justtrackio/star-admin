@@ -3,6 +3,7 @@ import { Alert, Button, Card, Descriptions, Result, Space, Spin, Tooltip, Typogr
 import { useMaterializedViews } from '../hooks/useMaterializedViews';
 import { MaterializedViewRefreshStatus, MaterializedViewStatus } from '../components/MaterializedViewStatus';
 import { formatRefreshSchedule } from '../utils/formatRefreshSchedule';
+import { formatTimestamp } from '../utils/formatTimestamp';
 
 export const Route = createFileRoute('/materialized-views_/$database/$id')({ component: MaterializedViewDetailPage });
 
@@ -37,7 +38,7 @@ function MaterializedViewDetailPage() {
         <Card title="Last refresh">
           <Descriptions column={{ xs: 1, sm: 2 }} items={[
             { key: 'state', label: 'State', children: <MaterializedViewRefreshStatus state={view.lastRefreshState} error={view.lastRefreshError} /> },
-            { key: 'lastSuccess', label: 'Last successful refresh at', children: <Tooltip title="Completion time of the most recent SUCCESS refresh in the available metadata or retained refresh history. Pending and skipped attempts do not replace it.">{view.lastSuccessfulRefreshFinished || '—'}</Tooltip> },
+            { key: 'lastSuccess', label: 'Last successful refresh at', children: <Tooltip title="Completion time of the most recent SUCCESS refresh in the available metadata or retained refresh history. Pending and skipped attempts do not replace it.">{formatTimestamp(view.lastSuccessfulRefreshFinished)}</Tooltip> },
           ]} />
         </Card>
         <Card title="SQL definition" extra={view.definition && <Typography.Text copyable={{ text: view.definition }}>Copy SQL</Typography.Text>}>

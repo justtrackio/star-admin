@@ -22,18 +22,11 @@ func ProvideStarRocksClient(ctx context.Context, config cfg.Config, logger log.L
 	return client, nil
 }
 
-// ModuleStarRocks owns the connection pool's application lifecycle.
-type ModuleStarRocks struct {
-	kernel.ServiceStage
-	kernel.BackgroundModule
-
-	client sqlc.Client
-}
-
 // NewModuleStarRocks connects and pings the configured cluster during application initialization.
 func NewModuleStarRocks(ctx context.Context, config cfg.Config, logger log.Logger) (kernel.Module, error) {
 	var client sqlc.Client
 	var err error
+
 	if client, err = ProvideStarRocksClient(ctx, config, logger); err != nil {
 		return nil, fmt.Errorf("could not initialize StarRocks connection: %w", err)
 	}
@@ -41,6 +34,14 @@ func NewModuleStarRocks(ctx context.Context, config cfg.Config, logger log.Logge
 	logger.Info(ctx, "StarRocks connection pool ready")
 
 	return &ModuleStarRocks{client: client}, nil
+}
+
+// ModuleStarRocks owns the connection pool's application lifecycle.
+type ModuleStarRocks struct {
+	kernel.ServiceStage
+	kernel.BackgroundModule
+
+	client sqlc.Client
 }
 
 // Run keeps the pool open until application modules have stopped, then closes it.

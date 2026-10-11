@@ -5,6 +5,10 @@ app:
 httpserver:
   default:
     port: 8082
+    compression:
+      exclude:
+        path:
+          - /api/materialized-views/watch
     timeout:
       read: 60s
       write: 60s

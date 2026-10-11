@@ -35,6 +35,7 @@ func main() {
 			}))
 			router.Group("/api").HandleWith(httpserver.With(internal.NewHandlerMaterializedViews, func(r *httpserver.Router, handler *internal.HandlerMaterializedViews) {
 				r.GET("/materialized-views", httpserver.BindN(handler.GetMaterializedViews))
+				r.GET("/materialized-views/watch", httpserver.BindSseNR(handler.WatchMaterializedViews))
 			}))
 
 			return nil

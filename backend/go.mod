@@ -1,6 +1,6 @@
 module github.com/justtrackio/star-admin
 
-go 1.27.2
+go 1.27.1
 
 require (
 	github.com/gin-contrib/cors v1.7.9
