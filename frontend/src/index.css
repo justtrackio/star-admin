@@ -1,0 +1,12 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+.app-header { display: flex; align-items: center; }
+.app-header a { color: white; font-size: 20px; font-weight: 600; }
+.app-content { width: 100%; max-width: 1200px; padding: 24px; margin: 0 auto; }
+.app-footer { text-align: center; }

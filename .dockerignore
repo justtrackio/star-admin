@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.aws
+**/node_modules
+frontend/dist
+backend/public/assets
+backend/public/index.html
+backend/bin
+backend/star-admin
+backend/config.*.yml
+!backend/config.dist.yml
+**/.env
+**/.env.local

@@ -1,0 +1,68 @@
+[tools]
+bun = "1.4.3"
+go = "1.27.2"
+gofumpt = "0.12.0"
+golangci-lint = "2.14.0"
+mockery = "3.8.0"
+
+[tasks."ci:backend-lint"]
+description = "Run backend lint"
+dir = "backend"
+run = "golangci-lint custom && ./bin/custom-gcl run"
+
+[tasks."ci:backend-test"]
+description = "Run backend tests"
+dir = "backend"
+run = "go test ./..."
+
+[tasks."ci:frontend-lint"]
+description = "Run frontend lint"
+dir = "frontend"
+run = "bun run lint"
+
+[tasks."ci:frontend-build"]
+description = "Run frontend build"
+dir = "frontend"
+run = "bun run build"
+
+[tasks."build:frontend"]
+description = "Build frontend assets"
+dir = "frontend"
+run = "bun run build"
+
+[tasks."build:copy-frontend"]
+description = "Copy frontend assets to backend/public"
+run = "mkdir -p backend/public && cp -r frontend/dist/. backend/public/"
+
+[tasks."build:backend"]
+description = "Build backend"
+dir = "backend"
+run = "go build -o star-admin ."
+
+[tasks.build]
+description = "Build frontend and backend"
+run = """
+mise run build:frontend
+mise run build:copy-frontend
+mise run build:backend
+"""
+
+[tasks.ci]
+description = "Run local CI jobs"
+run = """
+mise run ci:backend-lint
+mise run ci:backend-test
+mise run ci:frontend-lint
+mise run ci:frontend-build
+"""
+
+
+[tasks."dev:backend"]
+description = "Run the backend on port 8082"
+dir = "backend"
+run = "go run . -c config.sandbox.yml"
+
+[tasks."dev:frontend"]
+description = "Run the frontend dev server"
+dir = "frontend"
+run = "bun run dev"

@@ -1,0 +1,32 @@
+app:
+  env: sandbox
+  name: star-admin
+
+httpserver:
+  default:
+    port: 8082
+    timeout:
+      read: 60s
+      write: 60s
+      idle: 60s
+
+sqlc:
+  default:
+    driver: mysql
+    uri:
+      host: 127.0.0.1
+      port: 9030
+      user: root
+      password: ""
+      database: ""
+    max_open_connections: 10
+    max_idle_connections: 2
+    connection_max_lifetime: 5m
+    connection_max_idletime: 2m
+    multi_statements: false
+    timeouts:
+      timeout: 3s
+      readTimeout: 10s
+      writeTimeout: 10s
+    migrations:
+      enabled: false

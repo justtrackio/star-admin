@@ -1,0 +1,6 @@
+config.*.yml
+!config.dist.yml
+public/*
+!public/index.html
+/star-admin
+/bin/

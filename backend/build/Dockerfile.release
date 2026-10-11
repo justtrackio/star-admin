@@ -1,0 +1,7 @@
+# Requires a pre-built binary at dist/<arch>/star-admin.
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETARCH
+WORKDIR /app
+COPY dist/${TARGETARCH}/star-admin ./star-admin
+EXPOSE 8082
+ENTRYPOINT ["./star-admin"]

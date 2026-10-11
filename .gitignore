@@ -1,0 +1,6 @@
+.bv/
+.codegraph/
+.env
+.env.*
+!.env.example
+/dist/
