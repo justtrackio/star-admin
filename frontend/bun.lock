@@ -5,6 +5,7 @@
     "": {
       "name": "frontend",
       "dependencies": {
+        "@ant-design/icons": "6.3.4",
         "@tanstack/react-query": "^5.104.1",
         "@tanstack/react-router": "^1.170.42",
         "antd": "^6.6.5",

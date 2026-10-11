@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { Alert, Button, Card, Space, Spin, Tag, Typography } from 'antd';
 import { useHealth } from '../hooks/useHealth';
 
@@ -15,7 +15,10 @@ function Dashboard() {
         {error && <Alert type="error" showIcon title="Backend unavailable" description={error.message} />}
         {data && <Space><Tag color="green">Backend online</Tag><Typography.Text>{data.service}</Typography.Text></Space>}
       </Card>
-      <Alert type="info" showIcon title="Project foundation ready" description="StarRocks administration features have not been implemented yet." />
+      <Card title="Materialized views">
+        <Typography.Paragraph>Browse materialized views across the connected cluster's databases, inspect their status, and read their SQL definitions.</Typography.Paragraph>
+        <Link to="/materialized-views">View materialized views →</Link>
+      </Card>
     </Space>
   );
 }

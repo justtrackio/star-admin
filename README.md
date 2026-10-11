@@ -36,7 +36,9 @@ mise run dev:frontend
 
 Alternatively, run `go run . -c config.sandbox.yml` from `backend/` and `bun run dev` from `frontend/`.
 
-The backend listens on port **8082**. Vite serves the frontend on port **5173** and proxies `/api` to the backend. The dashboard calls `GET /api/health` through TanStack Query and displays application availability. This endpoint does not check StarRocks connectivity. No cluster operations are implemented yet.
+The backend listens on port **8082**. Vite serves the frontend on port **5173** and proxies `/api` to the backend. The dashboard calls `GET /api/health` through TanStack Query and displays application availability. This endpoint does not check StarRocks connectivity.
+
+The **Materialized views** page at `/materialized-views` lists views across databases in the configured cluster's internal catalog. `GET /api/materialized-views` reads `information_schema.materialized_views` through the shared connection pool. The page supports name/database search, database filtering, sorting, pagination, and manually reloading the list. Click a view name to open its detail page at `/materialized-views/<database>/<id>`, showing its overview, last refresh, SQL definition with a copy action, and any activation or refresh errors. Detail links work on direct navigation and show a not-found message when a view is absent. The last successful refresh timestamp uses the latest completed SUCCESS job in `information_schema.materialized_view_refresh_jobs`, or the latest attempt timestamp when that attempt succeeded. Pending and skipped attempts do not overwrite it. If successful jobs have expired from retained history and the latest attempt is not successful, this timestamp is unavailable. Row counts are approximate metadata statistics; unavailable metadata displays a dash. Reloading the list or details does not trigger a materialized-view refresh or change cluster data.
 
 `frontend/.env.example` documents the optional `VITE_API_BASE_URL` override. Backend defaults are embedded from `backend/config.dist.yml`; `-c` loads a YAML override, and gosoline supports environment overrides.
 
