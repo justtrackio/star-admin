@@ -19,6 +19,18 @@ function Dashboard() {
         <Typography.Paragraph>See compute node availability, capacity, resource usage, and heartbeat details.</Typography.Paragraph>
         <Link to="/overview">View cluster overview →</Link>
       </Card>
+      <Card title="Tables">
+        <Typography.Paragraph>Browse regular tables, approximate row counts, and data size.</Typography.Paragraph>
+        <Link to="/tables">View tables →</Link>
+      </Card>
+      <Card title="Kafka routines">
+        <Typography.Paragraph>Inspect Kafka ingestion jobs, throughput, errors, and consumed offsets.</Typography.Paragraph>
+        <Link to="/routine-loads">View Kafka routines →</Link>
+      </Card>
+      <Card title="Dictionaries">
+        <Typography.Paragraph>Browse available dictionaries, refresh status, errors, and memory details.</Typography.Paragraph>
+        <Link to="/dictionaries">View dictionaries →</Link>
+      </Card>
       <Card title="Materialized views">
         <Typography.Paragraph>Browse materialized views across the connected cluster's databases, inspect their status, and read their SQL definitions.</Typography.Paragraph>
         <Link to="/materialized-views">View materialized views →</Link>

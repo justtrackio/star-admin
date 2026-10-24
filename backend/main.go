@@ -36,9 +36,18 @@ func main() {
 			router.Group("/api").HandleWith(httpserver.With(internal.NewHandlerOverview, func(r *httpserver.Router, handler *internal.HandlerOverview) {
 				r.GET("/overview", httpserver.BindN(handler.GetOverview))
 			}))
+			router.Group("/api").HandleWith(httpserver.With(internal.NewHandlerTables, func(r *httpserver.Router, handler *internal.HandlerTables) {
+				r.GET("/tables", httpserver.BindSseNR(handler.WatchTables))
+				r.GET("/routine-loads", httpserver.BindSseNR(handler.WatchRoutineLoads))
+				r.POST("/routine-loads/:database/:id/:action", httpserver.Bind(handler.ControlRoutineLoad))
+			}))
+			router.Group("/api").HandleWith(httpserver.With(internal.NewHandlerDictionaries, func(r *httpserver.Router, handler *internal.HandlerDictionaries) {
+				r.GET("/dictionaries", httpserver.BindSseNR(handler.WatchDictionaries))
+			}))
 			router.Group("/api").HandleWith(httpserver.With(internal.NewHandlerMaterializedViews, func(r *httpserver.Router, handler *internal.HandlerMaterializedViews) {
-				r.GET("/materialized-views", httpserver.BindN(handler.GetMaterializedViews))
-				r.GET("/materialized-views/watch", httpserver.BindSseNR(handler.WatchMaterializedViews))
+				r.GET("/materialized-views/:database/:id", httpserver.BindSseR(handler.WatchMaterializedView))
+				r.GET("/materialized-views/:database/:id/tasks", httpserver.BindSseR(handler.WatchMaterializedViewTasks))
+				r.GET("/materialized-views", httpserver.BindSseNR(handler.WatchMaterializedViews))
 			}))
 
 			return nil

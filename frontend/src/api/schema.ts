@@ -48,3 +48,53 @@ export interface ComputeNode {
 export interface OverviewResponse {
   nodes: ComputeNode[];
 }
+
+export interface Dictionary {
+  id: string;
+  name: string;
+  catalog: string;
+  database: string;
+  source: string;
+  keys: string;
+  values: string;
+  status: string;
+  lastRefreshStarted: string;
+  lastRefreshFinished: string;
+  nextRefresh: string;
+  error: string;
+  memoryUsage: string;
+}
+
+export interface DictionariesResponse {
+  dictionaries: Dictionary[];
+}
+
+export interface ClusterTable {
+  database: string;
+  name: string;
+  engine: string;
+  rows: number | null;
+  dataBytes: number | null;
+}
+
+export interface TablesResponse {
+  tables: ClusterTable[];
+}
+
+export interface RoutineLoad {
+  id: string;
+  database: string;
+  table: string;
+  name: string;
+  state: string;
+  topic: string;
+  loadedRows: string;
+  errorRows: string;
+  rowsPerSecond: string;
+  progress: string;
+  reason: string;
+}
+
+export interface RoutineLoadsResponse {
+  jobs: RoutineLoad[];
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gosoline-project/httpserver"
@@ -14,9 +15,11 @@ type materializedViewsClient struct {
 	sqlc.Client
 	views []MaterializedView
 	err   error
+	query string
+	args  []any
 }
 
-func (c *materializedViewsClient) Select(ctx context.Context, dest any, _ string, _ ...any) error {
+func (c *materializedViewsClient) Select(ctx context.Context, dest any, query string, args ...any) error {
 	if _, ok := ctx.Deadline(); !ok {
 		return errors.New("metadata read must have a deadline")
 	}
@@ -24,6 +27,9 @@ func (c *materializedViewsClient) Select(ctx context.Context, dest any, _ string
 	if c.err != nil {
 		return c.err
 	}
+
+	c.query = query
+	c.args = args
 
 	views := dest.(*[]MaterializedView)
 	*views = append(*views, c.views...)
@@ -79,5 +85,30 @@ func TestMaterializedViewsQueryError(t *testing.T) {
 	response, err := handler.GetMaterializedViews(t.Context())
 	if response != nil || !errors.Is(err, queryError) {
 		t.Fatalf("expected wrapped query error and no response, got %v, %v", response, err)
+	}
+}
+
+func TestMaterializedViewSnapshotScope(t *testing.T) {
+	client := &materializedViewsClient{}
+	handler := &HandlerMaterializedViews{client: client}
+	var response httpserver.Response
+	var body []byte
+	var err error
+
+	if response, err = handler.getMaterializedViews(t.Context(), &MaterializedViewTasksInput{Database: "analytics'", ID: "9007199254740993"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(client.query, "WHERE mv.TABLE_SCHEMA = ? AND mv.MATERIALIZED_VIEW_ID = ?") ||
+		len(client.args) != 2 || client.args[0] != "analytics'" || client.args[1] != "9007199254740993" {
+		t.Fatalf("expected parameterized database and ID filter, got %s %v", client.query, client.args)
+	}
+
+	if body, err = response.Body(); err != nil {
+		t.Fatal(err)
+	}
+
+	if string(body) != `{"views":[]}` {
+		t.Fatalf("missing view should return an empty snapshot, got %s", body)
 	}
 }

@@ -14,5 +14,5 @@ body {
 .app-sidebar .app-sidebar-toggle { color: #cbd5e1; flex-shrink: 0; }
 .app-sidebar .app-sidebar-toggle:hover { color: white; background: #ffffff1f; }
 .view-definition { margin: 0; padding: 16px; background: #f5f5f5; white-space: pre-wrap; overflow-wrap: anywhere; }
-.app-content { box-sizing: border-box; width: 100%; max-width: 1200px; padding: 24px; margin: 0 auto; }
+.app-content { box-sizing: border-box; width: 100%; max-width: 1800px; padding: 24px; margin: 0 auto; }
 .app-footer { text-align: center; }

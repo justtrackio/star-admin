@@ -65,6 +65,7 @@ function OverviewPage() {
     {data && nodes.some(node => node.alive === false || node.decommissioned || node.error) && <Alert type="warning" showIcon title="Some compute nodes need attention" description="Review node status and expand affected rows for details." />}
     <Card title="Compute nodes" extra={<Space wrap><Typography.Text type="secondary">Last updated: {dataUpdatedAt ? formatTimestamp(dataUpdatedAt) : '—'}</Typography.Text><Button loading={isFetching} onClick={() => void refetch()}>Refresh</Button></Space>}>
       <Table<ComputeNode>
+        size="small"
         rowKey="id"
         columns={columns}
         dataSource={nodes}

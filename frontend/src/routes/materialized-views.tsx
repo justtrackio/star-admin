@@ -41,7 +41,7 @@ function MaterializedViewsPage() {
         <Typography.Title level={2}>Materialized views</Typography.Title>
         <Typography.Paragraph type="secondary">Views across all databases in the connected cluster. Updates automatically every 5 seconds. Click a view name to open its details.</Typography.Paragraph>
       </div>
-      {error && <Alert type="error" showIcon title="Could not load materialized views" description={error.message} action={<Button onClick={() => void refetch()}>Retry</Button>} />}
+      {error && <Alert type="error" showIcon title="Could not load materialized views" description={error.message} action={<Button onClick={refetch}>Retry</Button>} />}
       <Card title={`Materialized views${data ? ` (${views.length})` : ''}`} extra={
         <Typography.Text type="secondary">
           Last updated: {dataUpdatedAt ? <time dateTime={new Date(dataUpdatedAt).toISOString()}>{formatTimestamp(dataUpdatedAt)}</time> : '—'}
@@ -52,6 +52,7 @@ function MaterializedViewsPage() {
           <Select placeholder="All databases" aria-label="Filter by database" allowClear value={database} onChange={setDatabase} options={databases.map(value => ({ label: value, value }))} style={{ minWidth: 200 }} />
         </Space>
         <Table<MaterializedView>
+          size="small"
           rowKey={view => JSON.stringify([view.database, view.id, view.name])}
           columns={columns}
           dataSource={filteredViews}

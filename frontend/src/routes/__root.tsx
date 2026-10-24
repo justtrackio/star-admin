@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DashboardOutlined, CloudServerOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import { DashboardOutlined, CloudServerOutlined, BookOutlined, ImportOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Button, Layout, Menu, Tooltip } from 'antd';
@@ -34,7 +34,7 @@ function RootComponent() {
             theme="dark"
             mode="inline"
             inlineCollapsed={collapsed}
-            selectedKeys={[pathname.startsWith('/materialized-views') ? '/materialized-views' : pathname]}
+            selectedKeys={[pathname.startsWith('/materialized-views') ? '/materialized-views' : pathname.startsWith('/routine-loads') ? '/routine-loads' : pathname]}
             items={[
               {
                 key: '/',
@@ -47,6 +47,24 @@ function RootComponent() {
                 icon: collapsed ? <Link to="/overview" aria-label="Overview"><CloudServerOutlined /></Link> : <CloudServerOutlined />,
                 label: collapsed ? 'Overview' : <Link to="/overview">Overview</Link>,
                 title: 'Overview',
+              },
+              {
+                key: '/tables',
+                icon: collapsed ? <Link to="/tables" aria-label="Tables"><TableOutlined /></Link> : <TableOutlined />,
+                label: collapsed ? 'Tables' : <Link to="/tables">Tables</Link>,
+                title: 'Tables',
+              },
+              {
+                key: '/routine-loads',
+                icon: collapsed ? <Link to="/routine-loads" aria-label="Kafka routines"><ImportOutlined /></Link> : <ImportOutlined />,
+                label: collapsed ? 'Kafka routines' : <Link to="/routine-loads">Kafka routines</Link>,
+                title: 'Kafka routines',
+              },
+              {
+                key: '/dictionaries',
+                icon: collapsed ? <Link to="/dictionaries" aria-label="Dictionaries"><BookOutlined /></Link> : <BookOutlined />,
+                label: collapsed ? 'Dictionaries' : <Link to="/dictionaries">Dictionaries</Link>,
+                title: 'Dictionaries',
               },
               {
                 key: '/materialized-views',

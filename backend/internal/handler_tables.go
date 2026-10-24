@@ -1,0 +1,232 @@
+package internal
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gosoline-project/httpserver"
+	"github.com/gosoline-project/sqlc"
+	"github.com/justtrackio/gosoline/pkg/cfg"
+	"github.com/justtrackio/gosoline/pkg/log"
+)
+
+type Table struct {
+	Database  string `json:"database" db:"database_name"`
+	Name      string `json:"name" db:"name"`
+	Engine    string `json:"engine" db:"engine"`
+	Rows      *int64 `json:"rows" db:"table_rows"`
+	DataBytes *int64 `json:"dataBytes" db:"data_bytes"`
+}
+
+type RoutineLoad struct {
+	ID            string `json:"id" db:"id"`
+	Database      string `json:"database" db:"database_name"`
+	Table         string `json:"table" db:"table_name"`
+	Name          string `json:"name" db:"name"`
+	State         string `json:"state" db:"state"`
+	Topic         string `json:"topic" db:"topic"`
+	LoadedRows    string `json:"loadedRows" db:"loaded_rows"`
+	ErrorRows     string `json:"errorRows" db:"error_rows"`
+	RowsPerSecond string `json:"rowsPerSecond" db:"rows_per_second"`
+	Progress      string `json:"progress" db:"progress"`
+	Reason        string `json:"reason" db:"reason"`
+}
+
+const tablesQuery = `SELECT t.TABLE_SCHEMA AS database_name, t.TABLE_NAME AS name,
+ COALESCE(t.ENGINE, '') AS engine, t.TABLE_ROWS AS table_rows, t.DATA_LENGTH AS data_bytes
+ FROM information_schema.tables t
+ LEFT JOIN information_schema.materialized_views mv
+ ON mv.TABLE_SCHEMA = t.TABLE_SCHEMA AND mv.TABLE_NAME = t.TABLE_NAME
+ WHERE t.TABLE_TYPE IN ('BASE TABLE', 'TABLE')
+ AND t.TABLE_SCHEMA NOT IN ('information_schema', 'sys', '_statistics_')
+ AND mv.MATERIALIZED_VIEW_ID IS NULL
+ ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME`
+
+const routineLoadsQuery = `SELECT CAST(ID AS CHAR) AS id, DB_NAME AS database_name,
+ TABLE_NAME AS table_name, NAME AS name, COALESCE(STATE, '') AS state,
+ COALESCE(get_json_string(DATA_SOURCE_PROPERTIES, '$.topic'), '') AS topic,
+ COALESCE(get_json_string(STATISTICS, '$.loadedRows'), '') AS loaded_rows,
+ COALESCE(get_json_string(STATISTICS, '$.errorRows'), '') AS error_rows,
+ COALESCE(get_json_string(STATISTICS, '$.loadRowsRate'), '') AS rows_per_second,
+ COALESCE(PROGRESS, '') AS progress, COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason
+ FROM information_schema.routine_load_jobs
+ WHERE DATA_SOURCE_TYPE = 'KAFKA'
+ ORDER BY DB_NAME, TABLE_NAME, NAME, ID`
+
+type TablesResponse struct {
+	Tables []Table `json:"tables"`
+}
+
+type RoutineLoadsResponse struct {
+	Jobs []RoutineLoad `json:"jobs"`
+}
+
+type HandlerTables struct {
+	client sqlc.Client
+}
+
+func NewHandlerTables(ctx context.Context, config cfg.Config, logger log.Logger) (*HandlerTables, error) {
+	var client sqlc.Client
+	var err error
+
+	if client, err = ProvideStarRocksClient(ctx, config, logger); err != nil {
+		return nil, fmt.Errorf("could not create tables handler: %w", err)
+	}
+
+	return &HandlerTables{client: client}, nil
+}
+
+func (h *HandlerTables) GetTables(ctx context.Context) (httpserver.Response, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	tables := make([]Table, 0)
+	if err := h.client.Select(ctx, &tables, tablesQuery); err != nil {
+		return nil, fmt.Errorf("could not list tables: %w", err)
+	}
+
+	return httpserver.NewJsonResponse(TablesResponse{Tables: tables}), nil
+}
+
+func (h *HandlerTables) GetRoutineLoads(ctx context.Context) (httpserver.Response, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	jobs := make([]RoutineLoad, 0)
+	if err := h.client.Select(ctx, &jobs, routineLoadsQuery); err != nil {
+		return nil, fmt.Errorf("could not list Kafka routine load jobs: %w", err)
+	}
+
+	return httpserver.NewJsonResponse(RoutineLoadsResponse{Jobs: jobs}), nil
+}
+
+func (h *HandlerTables) WatchTables(_ context.Context, request *http.Request, writer *httpserver.SseWriter) error {
+	return watchSnapshots(request, writer, h.GetTables)
+}
+
+func (h *HandlerTables) WatchRoutineLoads(_ context.Context, request *http.Request, writer *httpserver.SseWriter) error {
+	return watchSnapshots(request, writer, h.GetRoutineLoads)
+}
+
+const routineLoadActionPause = "pause"
+
+type RoutineLoadControlInput struct {
+	Database string `uri:"database" binding:"required"`
+	ID       string `uri:"id" binding:"required,numeric"`
+	Action   string `uri:"action" binding:"required,oneof=pause resume resume-earliest resume-latest"`
+}
+
+func (h *HandlerTables) ControlRoutineLoad(ctx context.Context, input *RoutineLoadControlInput) (httpserver.Response, error) {
+	recoverOffsets := input.Action == "resume-earliest" || input.Action == "resume-latest"
+	if input.Action != routineLoadActionPause && input.Action != "resume" && !recoverOffsets {
+		return nil, httpserver.NewErrorWithStatus(http.StatusBadRequest, errors.New("unsupported routine action"))
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	jobs := make([]RoutineLoad, 0)
+	query := `SELECT NAME AS name, COALESCE(STATE, '') AS state, COALESCE(PROGRESS, '') AS progress,
+ COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason FROM information_schema.routine_load_jobs
+ WHERE DB_NAME = ? AND ID = ? AND DATA_SOURCE_TYPE = 'KAFKA'`
+
+	if err := h.client.Select(ctx, &jobs, query, input.Database, input.ID); err != nil {
+		return nil, fmt.Errorf("could not find Kafka routine: %w", err)
+	}
+
+	if len(jobs) == 0 {
+		return nil, httpserver.NewErrorWithStatus(http.StatusNotFound, errors.New("kafka routine not found"))
+	}
+
+	job := jobs[0]
+
+	canPause := job.State == "RUNNING" || job.State == "NEED_SCHEDULE" || job.State == "UNSTABLE"
+	if (input.Action != routineLoadActionPause && job.State != "PAUSED") || (input.Action == routineLoadActionPause && !canPause) {
+		return nil, httpserver.NewErrorWithStatus(http.StatusConflict, fmt.Errorf("cannot %s a routine in state %s; reload the routine", input.Action, job.State))
+	}
+
+	// Routine Load commands require identifiers, which cannot use query parameters.
+	identifier := "`" + strings.ReplaceAll(input.Database, "`", "``") + "`.`" + strings.ReplaceAll(job.Name, "`", "``") + "`"
+	if recoverOffsets {
+		if err := h.resetRoutineLoadOffsets(ctx, identifier, job, input.Action); err != nil {
+			return nil, err
+		}
+	}
+
+	command := "RESUME"
+	if input.Action == routineLoadActionPause {
+		command = "PAUSE"
+	}
+
+	query = command + " ROUTINE LOAD FOR " + identifier
+	if _, err := h.client.Exec(ctx, query); err != nil {
+		if recoverOffsets {
+			return nil, fmt.Errorf("offsets were reset, but the routine could not resume: %w", err)
+		}
+
+		return nil, fmt.Errorf("could not %s Kafka routine: %w", input.Action, err)
+	}
+
+	return httpserver.NewJsonResponse(map[string]string{"action": input.Action}), nil
+}
+
+func (h *HandlerTables) resetRoutineLoadOffsets(ctx context.Context, identifier string, job RoutineLoad, action string) error {
+	reason := strings.ToLower(job.Reason)
+	if !strings.Contains(reason, "offset out of range") && !strings.Contains(reason, "requested offset not available") {
+		return httpserver.NewErrorWithStatus(http.StatusConflict, errors.New("offset recovery requires a Kafka offset out of range error; reload the routine"))
+	}
+
+	var properties string
+	var err error
+
+	if properties, err = h.routineLoadResetProperties(job.Progress, action); err != nil {
+		return httpserver.NewErrorWithStatus(http.StatusConflict, err)
+	}
+
+	if _, err = h.client.Exec(ctx, "ALTER ROUTINE LOAD FOR "+identifier+properties); err != nil {
+		return fmt.Errorf("could not reset Kafka offsets; routine remains paused: %w", err)
+	}
+
+	return nil
+}
+
+func (h *HandlerTables) routineLoadResetProperties(progress string, action string) (string, error) {
+	var partitions map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(progress), &partitions); err != nil || len(partitions) == 0 {
+		return "", errors.New("cannot reset offsets without reported Kafka partitions")
+	}
+
+	ids := make([]int, 0, len(partitions))
+	for partition := range partitions {
+		var id uint64
+		var err error
+
+		if id, err = strconv.ParseUint(partition, 10, 31); err != nil {
+			return "", fmt.Errorf("invalid Kafka partition %q: %w", partition, err)
+		}
+
+		ids = append(ids, int(id))
+	}
+
+	slices.Sort(ids)
+	names := make([]string, len(ids))
+	offsets := make([]string, len(ids))
+
+	for i, id := range ids {
+		names[i] = strconv.Itoa(id)
+		offsets[i] = "OFFSET_BEGINNING"
+
+		if action == "resume-latest" {
+			offsets[i] = "OFFSET_END"
+		}
+	}
+
+	return ` FROM KAFKA ("kafka_partitions" = "` + strings.Join(names, ",") + `", "kafka_offsets" = "` + strings.Join(offsets, ",") + `")`, nil
+}

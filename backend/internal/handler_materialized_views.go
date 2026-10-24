@@ -57,17 +57,13 @@ LEFT JOIN (
     GROUP BY TABLE_SCHEMA, MATERIALIZED_VIEW_ID
 ) success ON success.TABLE_SCHEMA = mv.TABLE_SCHEMA
     AND success.MATERIALIZED_VIEW_ID = mv.MATERIALIZED_VIEW_ID
-ORDER BY mv.TABLE_SCHEMA, mv.TABLE_NAME, mv.MATERIALIZED_VIEW_ID`
+`
+
+const materializedViewsOrder = " ORDER BY mv.TABLE_SCHEMA, mv.TABLE_NAME, mv.MATERIALIZED_VIEW_ID"
 
 // MaterializedViewsResponse contains the materialized view snapshot.
 type MaterializedViewsResponse struct {
 	Views []MaterializedView `json:"views"`
-}
-
-const materializedViewsRefreshInterval = 5 * time.Second
-
-type materializedViewsEventWriter interface {
-	SendEvent(httpserver.SseEvent) error
 }
 
 // HandlerMaterializedViews lists materialized views using the shared pool.
@@ -88,11 +84,25 @@ func NewHandlerMaterializedViews(ctx context.Context, config cfg.Config, logger 
 
 // GetMaterializedViews performs only a metadata read, without refreshing any views.
 func (h *HandlerMaterializedViews) GetMaterializedViews(ctx context.Context) (httpserver.Response, error) {
+	return h.getMaterializedViews(ctx, nil)
+}
+
+func (h *HandlerMaterializedViews) getMaterializedViews(ctx context.Context, input *MaterializedViewTasksInput) (httpserver.Response, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
+	query := materializedViewsQuery
+	var args []any
+
+	if input != nil {
+		query += " WHERE mv.TABLE_SCHEMA = ? AND mv.MATERIALIZED_VIEW_ID = ?"
+		args = []any{input.Database, input.ID}
+	}
+
+	query += materializedViewsOrder
+
 	views := make([]MaterializedView, 0)
-	if err := h.client.Select(ctx, &views, materializedViewsQuery); err != nil {
+	if err := h.client.Select(ctx, &views, query, args...); err != nil {
 		return nil, fmt.Errorf("could not list materialized views: %w", err)
 	}
 
@@ -101,55 +111,52 @@ func (h *HandlerMaterializedViews) GetMaterializedViews(ctx context.Context) (ht
 
 // WatchMaterializedViews refreshes metadata only while this request is connected.
 func (h *HandlerMaterializedViews) WatchMaterializedViews(_ context.Context, request *http.Request, writer *httpserver.SseWriter) error {
-	ticker := time.NewTicker(materializedViewsRefreshInterval)
-	defer ticker.Stop()
-
-	// Use the HTTP request context directly so a disconnect cancels in-flight SQL.
-	return h.streamMaterializedViews(request.Context(), writer, ticker.C)
+	return watchSnapshots(request, writer, h.GetMaterializedViews)
 }
 
-func (h *HandlerMaterializedViews) streamMaterializedViews(ctx context.Context, writer materializedViewsEventWriter, ticks <-chan time.Time) error {
-	for {
-		if ctx.Err() != nil {
-			return nil
-		}
-
-		if err := h.sendMaterializedViewsSnapshot(ctx, writer); err != nil {
-			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticks:
-		}
-	}
+// WatchMaterializedView streams only the selected view, or an empty snapshot if it was removed.
+func (h *HandlerMaterializedViews) WatchMaterializedView(_ context.Context, request *http.Request, input *MaterializedViewTasksInput, writer *httpserver.SseWriter) error {
+	return watchSnapshots(request, writer, func(ctx context.Context) (httpserver.Response, error) {
+		return h.getMaterializedViews(ctx, input)
+	})
 }
 
-func (h *HandlerMaterializedViews) sendMaterializedViewsSnapshot(ctx context.Context, writer materializedViewsEventWriter) error {
-	response, err := h.GetMaterializedViews(ctx)
-	event := httpserver.SseEvent{Retry: 5000}
+const materializedViewTasksQuery = `SELECT
+ COALESCE(QUERY_ID, '') AS query_id,
+ COALESCE(STATE, '') AS state,
+ COALESCE(CAST(CREATE_TIME AS CHAR), '') AS created,
+ COALESCE(CAST(FINISH_TIME AS CHAR), '') AS finished,
+ COALESCE(PROGRESS, '') AS progress,
+ COALESCE(ERROR_MESSAGE, '') AS error_message,
+ COALESCE(EXTRA_MESSAGE, '') AS extra_message,
+ CAST(UNIX_TIMESTAMP(CREATE_TIME) * 1000 AS SIGNED) AS created_millis,
+ CAST(UNIX_TIMESTAMP(FINISH_TIME) * 1000 AS SIGNED) AS finished_millis,
+ CAST(UNIX_TIMESTAMP(NOW()) * 1000 AS SIGNED) AS observed_millis
+FROM information_schema.task_runs
+WHERE ` + "`DATABASE`" + ` = ? AND TASK_NAME = ?
+ORDER BY CREATE_TIME DESC, QUERY_ID DESC
+LIMIT 100`
 
-	if err != nil {
-		if ctx.Err() != nil {
-			return nil
-		}
+// GetMaterializedViewTasks reads refresh history without triggering a refresh.
+func (h *HandlerMaterializedViews) GetMaterializedViewTasks(ctx context.Context, input *MaterializedViewTasksInput) (httpserver.Response, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 
-		// Keep the connection alive and try again on the next tick.
-		event.Event = "refresh-error"
-		event.Data = err.Error()
-	} else {
-		var body []byte
-		if body, err = response.Body(); err != nil {
-			return fmt.Errorf("could not encode materialized views snapshot: %w", err)
-		}
-
-		event.Data = string(body)
+	tasks := make([]MaterializedViewTask, 0)
+	if err := h.client.Select(ctx, &tasks, materializedViewTasksQuery, input.Database, "mv-"+input.ID); err != nil {
+		return nil, fmt.Errorf("could not list materialized view refresh tasks: %w", err)
 	}
 
-	if err := writer.SendEvent(event); err != nil {
-		return fmt.Errorf("could not send materialized views snapshot: %w", err)
+	for i := range tasks {
+		tasks[i].enrich()
 	}
 
-	return nil
+	return httpserver.NewJsonResponse(MaterializedViewTasksResponse{Tasks: tasks}), nil
+}
+
+// WatchMaterializedViewTasks streams retained refresh task runs until the client disconnects.
+func (h *HandlerMaterializedViews) WatchMaterializedViewTasks(_ context.Context, request *http.Request, input *MaterializedViewTasksInput, writer *httpserver.SseWriter) error {
+	return watchSnapshots(request, writer, func(ctx context.Context) (httpserver.Response, error) {
+		return h.GetMaterializedViewTasks(ctx, input)
+	})
 }

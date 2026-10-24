@@ -11,6 +11,17 @@ Go backend with gosoline and httpserver, React/TypeScript frontend with TanStack
 - Frontend: `bun install --frozen-lockfile`, `bun run lint`, `bun run lint:fix`, `bun run build`.
 - Frontend lint uses Oxlint with type-aware checks; configure `frontend/.oxlintrc.json`. Warnings fail CI. TypeScript 7 checks types during the build.
 
+## Development verification
+
+- At the start of each session, check for this project's backend on port 8082 and frontend dev server on port 5173. Reuse running processes across sessions.
+- Start only missing servers. Do not create duplicate processes or use alternate ports.
+- Start the backend with the production environment configuration: run `go run . -c config.prod.yml` from `backend/`.
+- Start the frontend dev server with `mise run dev:frontend` from the project root.
+- In each new session, open the dashboard at `http://localhost:5173/` after both servers are ready, including when reusing existing processes.
+- Use both running servers to verify changes.
+- Restart the backend after completing changes, then verify the changed behavior again.
+- Leave both servers running when the session ends so other sessions can reuse them.
+
 ## Conventions
 
 - Go: snake_case files, contextual error wrapping, early returns, gosoline providers for shared services, constructor injection and httpserver typed handlers.
