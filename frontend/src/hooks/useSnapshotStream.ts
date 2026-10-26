@@ -9,7 +9,7 @@ export function useSnapshotStream<T>(endpoint: string, validate: (value: unknown
   const refetch = useCallback(() => {
     setStreamError(null);
     setIsFetching(true);
-    setConnectionVersion(version => version + 1);
+    setConnectionVersion((version) => version + 1);
   }, []);
   const query = useQuery<T>({
     queryKey: [endpoint],
@@ -65,8 +65,8 @@ export function useSnapshotStream<T>(endpoint: string, validate: (value: unknown
       clearTimeout(reconnectTimer);
       source?.close();
     };
-  // The version intentionally restarts the stream when the user requests a snapshot.
-  // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    // The version intentionally restarts the stream when the user requests a snapshot.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [queryClient, connectionVersion, endpoint, validate]);
 
   return {

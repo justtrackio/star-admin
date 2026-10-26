@@ -1,9 +1,12 @@
 import type { MaterializedView } from '../api/schema';
 
-export function formatRefreshSchedule(view: Pick<MaterializedView, 'refreshType' | 'refreshTrigger' | 'refreshPolicy'>): string {
+export function formatRefreshSchedule(
+  view: Pick<MaterializedView, 'refreshType' | 'refreshTrigger' | 'refreshPolicy'>,
+): string {
   if (view.refreshType === 'SYNC') return 'With base-table updates (synchronous)';
   if (view.refreshTrigger === 'MANUAL' || view.refreshPolicy === 'MANUAL') return 'Manual';
-  if (view.refreshTrigger === 'ON_BASE_TABLE_CHANGE' || view.refreshPolicy === 'ON_BASE_TABLE_CHANGE') return 'When base tables change';
+  if (view.refreshTrigger === 'ON_BASE_TABLE_CHANGE' || view.refreshPolicy === 'ON_BASE_TABLE_CHANGE')
+    return 'When base tables change';
 
   const interval = /\bEVERY\s*\(\s*INTERVAL\s+(\d+)\s+([A-Z]+)\s*\)/i.exec(view.refreshPolicy);
   if (interval) {

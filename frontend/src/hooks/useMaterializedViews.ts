@@ -6,5 +6,8 @@ export function useMaterializedViews() {
 }
 
 export function useMaterializedView(database: string, id: string) {
-  return useSnapshotStream(`/api/materialized-views/${encodeURIComponent(database)}/${encodeURIComponent(id)}`, isMaterializedViewsResponse);
+  return useSnapshotStream(
+    `/api/materialized-views/${encodeURIComponent(database)}/${encodeURIComponent(id)}`,
+    isMaterializedViewsResponse,
+  );
 }

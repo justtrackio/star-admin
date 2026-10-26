@@ -23,12 +23,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isRefreshTasksResponse(value: unknown): value is { tasks: RefreshTask[] } {
   if (!value || typeof value !== 'object' || !('tasks' in value) || !Array.isArray(value.tasks)) return false;
-  return value.tasks.every((task: unknown) => isRecord(task) &&
-    ['queryId', 'state', 'created', 'finished', 'progress', 'error'].every(field =>
-      typeof task[field] === 'string') &&
-    (task.partitions === null || (Array.isArray(task.partitions) && task.partitions.every((part: unknown) => typeof part === 'string'))) &&
-    (task.queueTime === null || typeof task.queueTime === 'number') &&
-    (task.processingTime === null || typeof task.processingTime === 'number'));
+  return value.tasks.every(
+    (task: unknown) =>
+      isRecord(task) &&
+      ['queryId', 'state', 'created', 'finished', 'progress', 'error'].every(
+        (field) => typeof task[field] === 'string',
+      ) &&
+      (task.partitions === null ||
+        (Array.isArray(task.partitions) && task.partitions.every((part: unknown) => typeof part === 'string'))) &&
+      (task.queueTime === null || typeof task.queueTime === 'number') &&
+      (task.processingTime === null || typeof task.processingTime === 'number'),
+  );
 }
 
 function formatDuration(seconds: number | null): string {
@@ -41,21 +46,37 @@ function formatDuration(seconds: number | null): string {
 const taskColumns: TableProps<RefreshTask>['columns'] = [
   { title: 'Created', dataIndex: 'created', render: (value: string) => formatTimestamp(value) },
   { title: 'Finished', dataIndex: 'finished', render: (value: string) => formatTimestamp(value) },
-  { title: 'State', key: 'state', render: (_, task) => <MaterializedViewRefreshStatus state={task.state} error={task.error} /> },
+  {
+    title: 'State',
+    key: 'state',
+    render: (_, task) => <MaterializedViewRefreshStatus state={task.state} error={task.error} />,
+  },
   { title: 'Progress', dataIndex: 'progress', render: (value: string) => value || '—' },
   { title: 'Partitions', key: 'partitionCount', render: (_, task) => task.partitions?.length ?? '—' },
-  { title: 'Partition names', dataIndex: 'partitions', render: (partitions: string[] | null) => {
-    const names = partitions?.map(formatPartitionName).join(', ') || '—';
-    return <Typography.Text style={{ maxWidth: 220 }} ellipsis={{ tooltip: names }}>{names}</Typography.Text>;
-  } },
+  {
+    title: 'Partition names',
+    dataIndex: 'partitions',
+    render: (partitions: string[] | null) => {
+      const names = partitions?.map(formatPartitionName).join(', ') || '—';
+      return (
+        <Typography.Text style={{ maxWidth: 220 }} ellipsis={{ tooltip: names }}>
+          {names}
+        </Typography.Text>
+      );
+    },
+  },
   { title: 'Queue time', dataIndex: 'queueTime', render: formatDuration },
   { title: 'Processing time', dataIndex: 'processingTime', render: formatDuration },
-  { title: 'Query ID', dataIndex: 'queryId', render: (value: string) => <Typography.Text copyable>{value}</Typography.Text> },
+  {
+    title: 'Query ID',
+    dataIndex: 'queryId',
+    render: (value: string) => <Typography.Text copyable>{value}</Typography.Text>,
+  },
 ];
 
 const taskExpandable: TableProps<RefreshTask>['expandable'] = {
-  rowExpandable: task => Boolean(task.error),
-  expandedRowRender: task => <Alert type="error" showIcon title="Refresh error" description={task.error} />,
+  rowExpandable: (task) => Boolean(task.error),
+  expandedRowRender: (task) => <Alert type="error" showIcon title="Refresh error" description={task.error} />,
 };
 
 export function MaterializedViewTasks({ database, id }: { database: string; id: string }) {
@@ -66,7 +87,19 @@ export function MaterializedViewTasks({ database, id }: { database: string; id: 
 
   return (
     <Space orientation="vertical" style={{ width: '100%' }}>
-      {error && <Alert type="error" showIcon title="Could not load refresh tasks" description={error.message} action={<Button loading={isFetching} onClick={refetch}>Retry</Button>} />}
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          title="Could not load refresh tasks"
+          description={error.message}
+          action={
+            <Button loading={isFetching} onClick={refetch}>
+              Retry
+            </Button>
+          }
+        />
+      )}
       <Table<RefreshTask>
         size="small"
         rowKey="queryId"

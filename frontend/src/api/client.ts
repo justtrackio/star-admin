@@ -12,18 +12,15 @@ export class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, options);
 
       if (!response.ok) {
         let errorMessage = response.statusText;
-        
+
         // Try to extract error details from response body
         try {
           const contentType = response.headers.get('content-type');
@@ -74,14 +71,14 @@ export class ApiClient {
     const options: RequestInit = {
       method: 'POST',
     };
-    
+
     if (data !== undefined) {
       options.headers = {
         'Content-Type': 'application/json',
       };
       options.body = JSON.stringify(data);
     }
-    
+
     return this.request<T>(endpoint, options);
   }
 

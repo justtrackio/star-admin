@@ -9,10 +9,20 @@ test('validates config snapshots with version-specific columns and empty values'
   for (const Value of ['', '0', 'false', '******']) {
     assert.equal(isFrontendConfigResponse({ columns, settings: [{ ...setting, Value }] }), true);
   }
-  assert.equal(isFrontendConfigResponse({ columns: [...columns, 'MasterOnly'], settings: [{ ...setting, MasterOnly: 'true' }] }), true);
-  for (const invalid of [null, {}, { columns: ['Key'], settings: [] }, { columns: [null], settings: [] },
-    { columns, settings: null }, { columns, settings: [null] }, { columns, settings: [{ ...setting, Value: 9030 }] },
-    { columns, settings: [{ Key: 'missing-fields', Value: '' }] }]) {
+  assert.equal(
+    isFrontendConfigResponse({ columns: [...columns, 'MasterOnly'], settings: [{ ...setting, MasterOnly: 'true' }] }),
+    true,
+  );
+  for (const invalid of [
+    null,
+    {},
+    { columns: ['Key'], settings: [] },
+    { columns: [null], settings: [] },
+    { columns, settings: null },
+    { columns, settings: [null] },
+    { columns, settings: [{ ...setting, Value: 9030 }] },
+    { columns, settings: [{ Key: 'missing-fields', Value: '' }] },
+  ]) {
     assert.equal(isFrontendConfigResponse(invalid), false);
   }
 });

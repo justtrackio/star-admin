@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "react",
-    "jsx-a11y",
-    "import"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
@@ -18,12 +11,7 @@
   "env": {
     "browser": true
   },
-  "ignorePatterns": [
-    "dist/**",
-    "node_modules/**",
-    "src/routeTree.gen.ts",
-    ".tanstack/**"
-  ],
+  "ignorePatterns": ["dist/**", "node_modules/**", "src/routeTree.gen.ts", ".tanstack/**"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "warn",
@@ -40,34 +28,25 @@
     "import/no-unassigned-import": [
       "warn",
       {
-        "allow": [
-          "**/*.css"
-        ]
+        "allow": ["**/*.css"]
       }
     ]
   },
   "overrides": [
     {
-      "files": [
-        "src/routes/**/*.tsx"
-      ],
+      "files": ["src/routes/**/*.tsx"],
       "rules": {
         "react/only-export-components": [
           "error",
           {
             "allowConstantExport": true,
-            "customHOCs": [
-              "createFileRoute",
-              "createRootRoute"
-            ]
+            "customHOCs": ["createFileRoute", "createRootRoute"]
           }
         ]
       }
     },
     {
-      "files": [
-        "vite.config.ts"
-      ],
+      "files": ["vite.config.ts"],
       "env": {
         "browser": false,
         "node": true

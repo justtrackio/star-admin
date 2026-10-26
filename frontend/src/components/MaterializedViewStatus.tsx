@@ -5,7 +5,8 @@ const refreshDescriptions: Record<string, string> = {
   RUNNING: 'The refresh is currently running.',
   SUCCESS: 'The refresh completed successfully.',
   FAILED: 'The refresh failed. See the error message for details.',
-  SKIPPED: 'No changes were detected in the relevant base-table partitions, so refreshing them was unnecessary. This is a normal outcome.',
+  SKIPPED:
+    'No changes were detected in the relevant base-table partitions, so refreshing them was unnecessary. This is a normal outcome.',
   MERGED: 'This refresh request was combined with another pending refresh request.',
 };
 
@@ -29,7 +30,9 @@ export function MaterializedViewStatus({ active, reason }: { active: string; rea
 
   return (
     <Tooltip title={`${description}${!isActive && reason ? ` Reason: ${reason}` : ''}`} trigger={['hover', 'focus']}>
-      <Tag color={isActive ? 'green' : 'red'} tabIndex={0}>{isActive ? 'Active' : 'Inactive'}</Tag>
+      <Tag color={isActive ? 'green' : 'red'} tabIndex={0}>
+        {isActive ? 'Active' : 'Inactive'}
+      </Tag>
     </Tooltip>
   );
 }
@@ -41,7 +44,9 @@ export function MaterializedViewRefreshStatus({ state, error }: { state: string;
 
   return (
     <Tooltip title={`${description}${error ? ` Last refresh error: ${error}` : ''}`} trigger={['hover', 'focus']}>
-      <Tag color={refreshColors[state] ?? 'orange'} tabIndex={0}>{state}</Tag>
+      <Tag color={refreshColors[state] ?? 'orange'} tabIndex={0}>
+        {state}
+      </Tag>
     </Tooltip>
   );
 }

@@ -32,7 +32,7 @@ func main() {
 			router.UseFactory(httpserver.CreateEmbeddedStaticServe(publicFs, "public", "/api"))
 
 			api := router.Group("/api")
-			
+
 			api.HandleWith(httpserver.With(internal.NewHandlerHealth, func(r *httpserver.Router, handler *internal.HandlerHealth) {
 				r.GET("/health", httpserver.BindN(handler.GetHealth))
 			}))
