@@ -19,18 +19,11 @@ jobs:
           go-version: "1.27.2"
           cache-dependency-path: backend/go.sum
 
-      - name: Install golangci-lint
+      - name: Run custom golangci-lint
         uses: golangci/golangci-lint-action@v9.3.0
         with:
           version: v2.14.0
-          install-only: true
           working-directory: backend
-
-      - name: Run custom golangci-lint
-        working-directory: backend
-        run: |
-          golangci-lint custom
-          ./bin/custom-gcl run
 
   backend-test:
     runs-on: ubuntu-latest
