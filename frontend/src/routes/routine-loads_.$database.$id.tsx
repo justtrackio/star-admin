@@ -4,6 +4,8 @@ import { Alert, Button, Card, Col, Descriptions, Popconfirm, Result, Row, Space,
 import { apiClient } from '../api/client';
 import type { ApiError } from '../api/client';
 import { RoutineLoadStatus } from '../components/RoutineLoadStatus';
+import { RoutineLoadTasks } from '../components/RoutineLoadTasks';
+import { RoutineLoadSettings } from '../components/RoutineLoadSettings';
 import { useRoutineLoads } from '../hooks/useRoutineLoads';
 import { formatTimestamp } from '../utils/formatTimestamp';
 import { isKafkaOffsetError } from '../utils/isKafkaOffsetError';
@@ -57,10 +59,7 @@ function RoutineLoadDetailPage() {
         <Col xs={24} sm={8}><Card><Statistic title="Error rows" value={job.errorRows || '—'} /></Card></Col>
         <Col xs={24} sm={8}><Card><Statistic title="Reported rows/s" value={job.rowsPerSecond || '—'} /></Card></Col>
       </Row>
-      <Card title="Overview" extra={<Space wrap>
-        <Typography.Text type="secondary">Last updated: {jobs.dataUpdatedAt ? formatTimestamp(jobs.dataUpdatedAt) : '—'}</Typography.Text>
-        <Button loading={jobs.isFetching} onClick={jobs.refetch}>Reload routine</Button>
-      </Space>}>
+      <Card title="Overview" extra={<Typography.Text type="secondary">Last updated: {jobs.dataUpdatedAt ? formatTimestamp(jobs.dataUpdatedAt) : '—'}</Typography.Text>}>
         <Descriptions size="small" column={{ xs: 1, sm: 2, lg: 3 }} items={[
           { key: 'state', label: 'State', children: <RoutineLoadStatus state={job.state} /> },
           { key: 'id', label: 'Job ID', children: job.id },
@@ -70,6 +69,8 @@ function RoutineLoadDetailPage() {
         ]} />
         <Typography.Paragraph type="secondary" style={{ marginTop: 16, marginBottom: 0 }}>Row totals belong to this job. Throughput is reported by StarRocks.</Typography.Paragraph>
       </Card>
+      <RoutineLoadSettings taskConsumeSecond={job.taskConsumeSecond} />
+      <RoutineLoadTasks database={database} id={id} />
       <Card title="Consumed offsets by Kafka partition">
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{job.progress || 'No partition offsets reported.'}</pre>
         <Typography.Text type="secondary">Consumed offsets do not indicate consumer lag. Kafka end offsets are not available in this metadata.</Typography.Text>

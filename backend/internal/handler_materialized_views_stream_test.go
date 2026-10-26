@@ -30,9 +30,11 @@ func TestSnapshotStreamRetriesAndStopsOnDisconnect(t *testing.T) {
 		expected string
 	}{
 		{name: "tasks", data: MaterializedViewTasksResponse{Tasks: []MaterializedViewTask{}}, expected: `{"tasks":[]}`},
+		{name: "frontend config", data: FrontendConfigResponse{Columns: []string{"Key", "Value"}, Settings: []map[string]string{}}, expected: `{"columns":["Key","Value"],"settings":[]}`},
 		{name: "tables", data: TablesResponse{Tables: []Table{}}, expected: `{"tables":[]}`},
 		{name: "routine loads", data: RoutineLoadsResponse{Jobs: []RoutineLoad{}}, expected: `{"jobs":[]}`},
 		{name: "dictionaries", data: DictionariesResponse{Dictionaries: []Dictionary{}}, expected: `{"dictionaries":[]}`},
+		{name: "resource groups", data: ResourceGroupsResponse{Groups: []ResourceGroup{}}, expected: `{"groups":[]}`},
 	} {
 		t.Run(payload.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())

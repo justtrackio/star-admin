@@ -36,10 +36,7 @@ function RoutineLoadsPage() {
     <Input placeholder="Search by database, table, job or topic" aria-label="Search Kafka routines" allowClear value={search} onChange={event => setSearch(event.target.value)} style={{ width: 360, maxWidth: '100%' }} />
     {jobs.error && <Alert type="error" showIcon title="Could not update Kafka ingestion" description={jobs.error.message} action={<Button onClick={jobs.refetch}>Retry</Button>} />}
     {jobs.error && jobs.data && <Alert type="warning" showIcon title="Showing the last successful ingestion snapshot. Job states may be out of date." />}
-    <Card title={`Kafka ingestion${jobs.data ? ` (${jobs.data.jobs.length})` : ''}`} extra={<Space wrap>
-      <Typography.Text type="secondary">Last updated: {jobs.dataUpdatedAt ? formatTimestamp(jobs.dataUpdatedAt) : '—'}</Typography.Text>
-      <Button loading={jobs.isFetching} onClick={jobs.refetch}>Reload ingestion</Button>
-    </Space>}>
+    <Card title={`Kafka ingestion${jobs.data ? ` (${jobs.data.jobs.length})` : ''}`} extra={<Typography.Text type="secondary">Last updated: {jobs.dataUpdatedAt ? formatTimestamp(jobs.dataUpdatedAt) : '—'}</Typography.Text>}>
       <Table<RoutineLoad> size="small" rowKey="id" columns={jobColumns} dataSource={filteredJobs} loading={jobs.isPending} scroll={{ x: 1500 }} onRow={job => ({ style: { cursor: 'pointer' }, onClick: () => { void navigate({ to: '/routine-loads/$database/$id', params: { database: job.database, id: job.id } }); } })} pagination={{ defaultPageSize: 20, showSizeChanger: true }} locale={{ emptyText: <Empty description={jobs.error ? 'Kafka ingestion metadata unavailable' : query ? 'No ingestion jobs match your search' : 'No Kafka Routine Load jobs visible to this account'} /> }} />
       <Typography.Text type="secondary">Row totals belong to each job. Click a routine to see its details and consumed partition offsets. External Kafka connectors are not reported by Routine Load metadata.</Typography.Text>
     </Card>

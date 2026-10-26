@@ -36,7 +36,7 @@ func (c *tablesClient) Select(ctx context.Context, dest any, query string, _ ...
 	case *[]Table:
 		*rows = append(*rows, Table{Database: "analytics", Name: "events"})
 	case *[]RoutineLoad:
-		*rows = append(*rows, RoutineLoad{ID: "9007199254740993", Database: "analytics", Table: "events", State: "PAUSED", Reason: "too many error rows", ErrorRows: "10", Progress: `{"0":"9007199254740993"}`})
+		*rows = append(*rows, RoutineLoad{ID: "9007199254740993", Database: "analytics", Table: "events", State: "PAUSED", Reason: "too many error rows", ErrorRows: "10", TaskConsumeSecond: "30", Progress: `{"0":"9007199254740993"}`})
 	}
 
 	return nil
@@ -91,11 +91,11 @@ func TestRoutineLoadMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(result.Jobs) != 1 || result.Jobs[0].ID != "9007199254740993" || result.Jobs[0].State != "PAUSED" || result.Jobs[0].Reason != "too many error rows" || result.Jobs[0].ErrorRows != "10" || result.Jobs[0].Progress != `{"0":"9007199254740993"}` {
+	if len(result.Jobs) != 1 || result.Jobs[0].ID != "9007199254740993" || result.Jobs[0].State != "PAUSED" || result.Jobs[0].Reason != "too many error rows" || result.Jobs[0].ErrorRows != "10" || result.Jobs[0].TaskConsumeSecond != "30" || result.Jobs[0].Progress != `{"0":"9007199254740993"}` {
 		t.Fatalf("lost ingestion identity, errors or offset precision: %s", body)
 	}
 
-	if strings.Contains(client.query, "CUSTOM_PROPERTIES") || !strings.Contains(client.query, "get_json_string(DATA_SOURCE_PROPERTIES, '$.topic')") {
+	if strings.Contains(client.query, "CUSTOM_PROPERTIES") || !strings.Contains(client.query, "get_json_string(DATA_SOURCE_PROPERTIES, '$.topic')") || !strings.Contains(client.query, "get_json_string(JOB_PROPERTIES, '$.taskConsumeSecond')") {
 		t.Fatalf("only select the topic, not Kafka connection properties: %s", client.query)
 	}
 }

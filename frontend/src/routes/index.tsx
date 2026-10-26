@@ -1,23 +1,27 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Alert, Button, Card, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Card, Space, Spin, Tag, Typography } from 'antd';
 import { useHealth } from '../hooks/useHealth';
 
 export const Route = createFileRoute('/')({ component: Dashboard });
 
 function Dashboard() {
-  const { data, error, isPending, isFetching, refetch } = useHealth();
+  const { data, error, isPending } = useHealth();
 
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       <Typography.Title level={2}>Cluster administration</Typography.Title>
-      <Card title="Application status" extra={<Button loading={isFetching} onClick={() => void refetch()}>Refresh</Button>}>
+      <Card title="Application status">
         {isPending && <Spin tip="Checking backend"><div style={{ height: 48 }} /></Spin>}
         {error && <Alert type="error" showIcon title="Backend unavailable" description={error.message} />}
         {data && <Space><Tag color="green">Backend online</Tag><Typography.Text>{data.service}</Typography.Text></Space>}
       </Card>
-      <Card title="Cluster overview">
-        <Typography.Paragraph>See compute node availability, capacity, resource usage, and heartbeat details.</Typography.Paragraph>
-        <Link to="/overview">View cluster overview →</Link>
+      <Card title="Nodes">
+        <Typography.Paragraph>Browse frontend, backend, and compute nodes and inspect their live details.</Typography.Paragraph>
+        <Link to="/nodes">View nodes →</Link>
+      </Card>
+      <Card title="Resource groups">
+        <Typography.Paragraph>Browse resource groups, configured limits, and classifier rules.</Typography.Paragraph>
+        <Link to="/resource-groups">View resource groups →</Link>
       </Card>
       <Card title="Tables">
         <Typography.Paragraph>Browse regular tables, approximate row counts, and data size.</Typography.Paragraph>

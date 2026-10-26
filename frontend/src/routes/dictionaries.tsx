@@ -36,7 +36,7 @@ function DictionaryDetails({ dictionary }: { dictionary: Dictionary }) {
 const expandable = { expandedRowRender: (dictionary: Dictionary) => <DictionaryDetails dictionary={dictionary} /> };
 
 function DictionariesPage() {
-  const { data, error, isPending, isFetching, dataUpdatedAt, refetch } = useDictionaries();
+  const { data, error, isPending, dataUpdatedAt, refetch } = useDictionaries();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>();
   const dictionaries = data?.dictionaries ?? [];
@@ -54,10 +54,7 @@ function DictionariesPage() {
     </div>
     {error && <Alert type="error" showIcon title="Could not update dictionaries" description={error.message} action={<Button onClick={refetch}>Retry</Button>} />}
     {error && data && <Alert type="warning" showIcon title="Showing the last successful snapshot. Dictionary status may be out of date." />}
-    <Card title={`Dictionaries${data ? ` (${dictionaries.length})` : ''}`} extra={<Space wrap>
-      <Typography.Text type="secondary">Last updated: {dataUpdatedAt ? formatTimestamp(dataUpdatedAt) : '—'}</Typography.Text>
-      <Button loading={isFetching} onClick={refetch}>Reload</Button>
-    </Space>}>
+    <Card title={`Dictionaries${data ? ` (${dictionaries.length})` : ''}`} extra={<Typography.Text type="secondary">Last updated: {dataUpdatedAt ? formatTimestamp(dataUpdatedAt) : '—'}</Typography.Text>}>
       <Space wrap style={{ marginBottom: 16 }}>
         <Input placeholder="Search by name, database or source" aria-label="Search dictionaries" allowClear value={search} onChange={event => setSearch(event.target.value)} style={{ width: 300, maxWidth: '100%' }} />
         <Select placeholder="All statuses" aria-label="Filter dictionaries by status" allowClear value={status} onChange={setStatus} options={statuses.map(value => ({ label: value, value }))} style={{ minWidth: 180 }} />
@@ -73,7 +70,7 @@ function DictionariesPage() {
         expandable={expandable}
         locale={{ emptyText: <Empty description={error ? 'Dictionaries unavailable' : dictionaries.length ? 'No dictionaries match your filters' : 'No dictionaries in this cluster'} /> }}
       />
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>Status and errors are reported separately: a finished dictionary can still report a failed refresh that rolled back to previously cached data. Reload reads metadata only.</Typography.Paragraph>
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>Status and errors are reported separately: a finished dictionary can still report a failed refresh that rolled back to previously cached data.</Typography.Paragraph>
     </Card>
   </Space>;
 }

@@ -25,7 +25,10 @@ export interface MaterializedViewsResponse {
   views: MaterializedView[];
 }
 
-export interface ComputeNode {
+export interface ClusterNode {
+  type: 'frontend' | 'backend' | 'compute';
+  role: string;
+  details: Record<string, string>;
   id: string;
   host: string;
   alive: boolean | null;
@@ -45,8 +48,8 @@ export interface ComputeNode {
   dataCache: string;
 }
 
-export interface OverviewResponse {
-  nodes: ComputeNode[];
+export interface NodesResponse {
+  nodes: ClusterNode[];
 }
 
 export interface Dictionary {
@@ -93,8 +96,49 @@ export interface RoutineLoad {
   rowsPerSecond: string;
   progress: string;
   reason: string;
+  taskConsumeSecond: string;
+}
+
+export interface RoutineLoadSettings {
+  maxBatchSize: string;
+  taskConsumeSecond: string;
 }
 
 export interface RoutineLoadsResponse {
   jobs: RoutineLoad[];
+}
+
+export interface RoutineLoadTask {
+  id: string;
+  jobId: string;
+  transactionId: string;
+  transactionStatus: string;
+  created: string;
+  lastScheduled: string;
+  executeStarted: string;
+  timeout: string;
+  nodeId: string;
+  progress: string;
+  message: string;
+  warehouse: string;
+}
+
+export interface RoutineLoadTasksResponse {
+  tasks: RoutineLoadTask[];
+}
+
+export interface ResourceGroup {
+  id: string;
+  name: string;
+  properties: Record<string, string>;
+  classifiers: string[];
+}
+
+export interface ResourceGroupsResponse {
+  groups: ResourceGroup[];
+}
+
+export interface FrontendConfigResponse {
+  columns: string[];
+  settings: Record<string, string>[];
 }

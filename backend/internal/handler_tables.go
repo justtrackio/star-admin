@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,17 +27,18 @@ type Table struct {
 }
 
 type RoutineLoad struct {
-	ID            string `json:"id" db:"id"`
-	Database      string `json:"database" db:"database_name"`
-	Table         string `json:"table" db:"table_name"`
-	Name          string `json:"name" db:"name"`
-	State         string `json:"state" db:"state"`
-	Topic         string `json:"topic" db:"topic"`
-	LoadedRows    string `json:"loadedRows" db:"loaded_rows"`
-	ErrorRows     string `json:"errorRows" db:"error_rows"`
-	RowsPerSecond string `json:"rowsPerSecond" db:"rows_per_second"`
-	Progress      string `json:"progress" db:"progress"`
-	Reason        string `json:"reason" db:"reason"`
+	ID                string `json:"id" db:"id"`
+	Database          string `json:"database" db:"database_name"`
+	Table             string `json:"table" db:"table_name"`
+	Name              string `json:"name" db:"name"`
+	State             string `json:"state" db:"state"`
+	Topic             string `json:"topic" db:"topic"`
+	LoadedRows        string `json:"loadedRows" db:"loaded_rows"`
+	ErrorRows         string `json:"errorRows" db:"error_rows"`
+	RowsPerSecond     string `json:"rowsPerSecond" db:"rows_per_second"`
+	Progress          string `json:"progress" db:"progress"`
+	Reason            string `json:"reason" db:"reason"`
+	TaskConsumeSecond string `json:"taskConsumeSecond" db:"task_consume_second"`
 }
 
 const tablesQuery = `SELECT t.TABLE_SCHEMA AS database_name, t.TABLE_NAME AS name,
@@ -55,7 +57,8 @@ const routineLoadsQuery = `SELECT CAST(ID AS CHAR) AS id, DB_NAME AS database_na
  COALESCE(get_json_string(STATISTICS, '$.loadedRows'), '') AS loaded_rows,
  COALESCE(get_json_string(STATISTICS, '$.errorRows'), '') AS error_rows,
  COALESCE(get_json_string(STATISTICS, '$.loadRowsRate'), '') AS rows_per_second,
- COALESCE(PROGRESS, '') AS progress, COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason
+ COALESCE(PROGRESS, '') AS progress, COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason,
+ COALESCE(get_json_string(JOB_PROPERTIES, '$.taskConsumeSecond'), '') AS task_consume_second
  FROM information_schema.routine_load_jobs
  WHERE DATA_SOURCE_TYPE = 'KAFKA'
  ORDER BY DB_NAME, TABLE_NAME, NAME, ID`
@@ -229,4 +232,159 @@ func (h *HandlerTables) routineLoadResetProperties(progress string, action strin
 	}
 
 	return ` FROM KAFKA ("kafka_partitions" = "` + strings.Join(names, ",") + `", "kafka_offsets" = "` + strings.Join(offsets, ",") + `")`, nil
+}
+
+func (h *HandlerTables) GetRoutineLoadTasks(ctx context.Context, input *RoutineLoadTasksInput) (response httpserver.Response, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	jobs := make([]RoutineLoad, 0)
+	tasks := make([]RoutineLoadTask, 0)
+	query := `SELECT NAME AS name FROM information_schema.routine_load_jobs WHERE DB_NAME = ? AND ID = ? AND DATA_SOURCE_TYPE = 'KAFKA'`
+
+	if err = h.client.Select(ctx, &jobs, query, input.Database, input.ID); err != nil {
+		return nil, fmt.Errorf("could not find Kafka routine: %w", err)
+	}
+
+	if len(jobs) == 0 {
+		return httpserver.NewJsonResponse(RoutineLoadTasksResponse{Tasks: tasks}), nil
+	}
+
+	// SHOW ROUTINE LOAD TASK does not support the prepared statement protocol.
+	query = h.routineLoadTasksQuery(input.Database, jobs[0].Name)
+	var rows *sqlc.Rows
+	var columns []string
+
+	if rows, err = h.client.Query(ctx, query); err != nil {
+		return nil, fmt.Errorf("could not list routine load tasks: %w", err)
+	}
+
+	defer func() {
+		var closeErr error
+		if closeErr = rows.Close(); closeErr != nil && err == nil {
+			response = nil
+			err = fmt.Errorf("could not close routine task rows: %w", closeErr)
+		}
+	}()
+
+	if columns, err = rows.Columns(); err != nil {
+		return nil, fmt.Errorf("could not read routine task columns: %w", err)
+	}
+
+	for rows.Next() {
+		values := make([]sql.NullString, len(columns))
+		destinations := make([]any, len(columns))
+
+		for i := range values {
+			destinations[i] = &values[i]
+		}
+
+		if err = rows.Scan(destinations...); err != nil {
+			return nil, fmt.Errorf("could not read routine task: %w", err)
+		}
+
+		metadata := make(map[string]string, len(columns))
+		for i, column := range columns {
+			metadata[column] = values[i].String
+		}
+
+		task := h.routineLoadTaskFromMetadata(metadata)
+		if task.JobID == input.ID {
+			tasks = append(tasks, task)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("could not iterate routine tasks: %w", err)
+	}
+
+	return httpserver.NewJsonResponse(RoutineLoadTasksResponse{Tasks: tasks}), nil
+}
+
+func (h *HandlerTables) routineLoadTasksQuery(database, name string) string {
+	name = strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(name)
+
+	return "SHOW ROUTINE LOAD TASK FROM `" + strings.ReplaceAll(database, "`", "``") + "` WHERE JobName = '" + name + "'"
+}
+
+func (h *HandlerTables) routineLoadTaskFromMetadata(m map[string]string) RoutineLoadTask {
+	for key, value := range m {
+		if value == "NULL" {
+			m[key] = ""
+		}
+	}
+
+	return RoutineLoadTask{
+		ID: m["TaskId"], JobID: m["JobId"], TransactionID: m["TxnId"], TransactionStatus: m["TxnStatus"],
+		Created: m["CreateTime"], LastScheduled: m["LastScheduledTime"], ExecuteStarted: m["ExecuteStartTime"],
+		Timeout: m["Timeout"], NodeID: m["BeId"], Progress: m["DataSourceProperties"], Message: m["Message"], Warehouse: m["Warehouse"],
+	}
+}
+
+func (h *HandlerTables) WatchRoutineLoadTasks(_ context.Context, request *http.Request, input *RoutineLoadTasksInput, writer *httpserver.SseWriter) error {
+	// Tasks can execute and be replaced between the usual five-second snapshots.
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	return streamSnapshots(request.Context(), writer, ticker.C, func(ctx context.Context) (httpserver.Response, error) {
+		return h.GetRoutineLoadTasks(ctx, input)
+	})
+}
+
+func (h *HandlerTables) GetRoutineLoadSettings(ctx context.Context) (response httpserver.Response, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	var rows *sqlc.Rows
+	var columns []string
+
+	if rows, err = h.client.Query(ctx, "ADMIN SHOW FRONTEND CONFIG LIKE '%routine_load%'"); err != nil {
+		return nil, fmt.Errorf("could not read routine load cluster settings: %w", err)
+	}
+
+	defer func() {
+		var closeErr error
+		if closeErr = rows.Close(); closeErr != nil && err == nil {
+			response = nil
+			err = fmt.Errorf("could not close routine setting rows: %w", closeErr)
+		}
+	}()
+
+	if columns, err = rows.Columns(); err != nil {
+		return nil, fmt.Errorf("could not read routine setting columns: %w", err)
+	}
+
+	keyIndex, valueIndex := slices.Index(columns, "Key"), slices.Index(columns, "Value")
+	if keyIndex < 0 || valueIndex < 0 {
+		return nil, errors.New("routine setting metadata is missing Key or Value columns")
+	}
+
+	settings := RoutineLoadSettings{}
+	for rows.Next() {
+		values := make([]sql.NullString, len(columns))
+		destinations := make([]any, len(columns))
+
+		for i := range values {
+			destinations[i] = &values[i]
+		}
+
+		if err = rows.Scan(destinations...); err != nil {
+			return nil, fmt.Errorf("could not read routine setting: %w", err)
+		}
+
+		switch values[keyIndex].String {
+		case "max_routine_load_batch_size":
+			settings.MaxBatchSize = values[valueIndex].String
+		case "routine_load_task_consume_second":
+			settings.TaskConsumeSecond = values[valueIndex].String
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("could not iterate routine settings: %w", err)
+	}
+
+	return httpserver.NewJsonResponse(settings), nil
+}
+
+func (h *HandlerTables) WatchRoutineLoadSettings(_ context.Context, request *http.Request, writer *httpserver.SseWriter) error {
+	return watchSnapshots(request, writer, h.GetRoutineLoadSettings)
 }

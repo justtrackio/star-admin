@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DashboardOutlined, CloudServerOutlined, BookOutlined, ImportOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import { DashboardOutlined, ClusterOutlined, CloudServerOutlined, BookOutlined, ImportOutlined, TableOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Button, Layout, Menu, Tooltip } from 'antd';
@@ -34,7 +34,7 @@ function RootComponent() {
             theme="dark"
             mode="inline"
             inlineCollapsed={collapsed}
-            selectedKeys={[pathname.startsWith('/materialized-views') ? '/materialized-views' : pathname.startsWith('/routine-loads') ? '/routine-loads' : pathname]}
+            selectedKeys={[pathname.startsWith('/nodes') ? '/nodes' : pathname.startsWith('/materialized-views') ? '/materialized-views' : pathname.startsWith('/routine-loads') ? '/routine-loads' : pathname]}
             items={[
               {
                 key: '/',
@@ -43,10 +43,16 @@ function RootComponent() {
                 title: 'Dashboard',
               },
               {
-                key: '/overview',
-                icon: collapsed ? <Link to="/overview" aria-label="Overview"><CloudServerOutlined /></Link> : <CloudServerOutlined />,
-                label: collapsed ? 'Overview' : <Link to="/overview">Overview</Link>,
-                title: 'Overview',
+                key: '/nodes',
+                icon: collapsed ? <Link to="/nodes" aria-label="Nodes"><CloudServerOutlined /></Link> : <CloudServerOutlined />,
+                label: collapsed ? 'Nodes' : <Link to="/nodes">Nodes</Link>,
+                title: 'Nodes',
+              },
+              {
+                key: '/resource-groups',
+                icon: collapsed ? <Link to="/resource-groups" aria-label="Resource groups"><ClusterOutlined /></Link> : <ClusterOutlined />,
+                label: collapsed ? 'Resource groups' : <Link to="/resource-groups">Resource groups</Link>,
+                title: 'Resource groups',
               },
               {
                 key: '/tables',
