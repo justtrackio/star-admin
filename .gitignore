@@ -1,4 +1,7 @@
 .bv/
+.agents/
+.aws/
+.codex/
 .codegraph/
 .env
 .env.*

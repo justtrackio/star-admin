@@ -1,6 +1,9 @@
 # StarRocks Admin
 
-Backend and frontend foundation for a StarRocks cluster administration application, using current stable releases.
+Web-based administration and monitoring for StarRocks clusters. Browse nodes, tables, materialized views, dictionaries, resource groups, and Kafka Routine Load jobs.
+
+[![CI](https://github.com/justtrackio/star-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/justtrackio/star-admin/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Stack
 
@@ -20,6 +23,8 @@ The Vite integration uses the maintained `@tanstack/router-plugin` package with 
 Install the pinned tools and dependencies:
 
 ```sh
+git clone https://github.com/justtrackio/star-admin.git
+cd star-admin
 mise install
 cd frontend
 bun install --frozen-lockfile
@@ -88,6 +93,8 @@ Frontend lint settings are in `frontend/.oxlintrc.json`. They enable Oxlint's co
 
 ## Production
 
+Run behind an authenticated reverse proxy or on a trusted private network. The application has no built-in authentication, exposes cluster metadata, and can change Routine Load jobs with the configured database account's permissions. Do not expose it directly to the public internet.
+
 ```sh
 mise run build
 ./backend/star-admin
@@ -120,3 +127,7 @@ frontend/
 mise.toml                 # pinned tools and dev/build/CI tasks
 .github/workflows/        # CI and multi-architecture image publishing
 ```
+
+## License
+
+[MIT](LICENSE)
