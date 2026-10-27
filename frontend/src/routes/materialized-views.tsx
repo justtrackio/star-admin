@@ -6,6 +6,7 @@ import type { MaterializedView } from '../api/schema';
 import { useMaterializedViews } from '../hooks/useMaterializedViews';
 import { MaterializedViewRefreshStatus, MaterializedViewStatus } from '../components/MaterializedViewStatus';
 import { formatRefreshSchedule } from '../utils/formatRefreshSchedule';
+import { formatFreshness } from '../utils/formatFreshness';
 import { formatTimestamp } from '../utils/formatTimestamp';
 
 export const Route = createFileRoute('/materialized-views')({ component: MaterializedViewsPage });
@@ -37,18 +38,18 @@ const columns: TableColumnsType<MaterializedView> = [
     render: (value: string, view) => <MaterializedViewRefreshStatus state={value} error={view.lastRefreshError} />,
   },
   {
-    title: 'Last successful refresh at',
-    dataIndex: 'lastSuccessfulRefreshFinished',
-    sorter: (a, b) => a.lastSuccessfulRefreshFinished.localeCompare(b.lastSuccessfulRefreshFinished),
-    render: (value: string) => (
+    title: 'Data freshness',
+    dataIndex: 'lastSuccessfulRefreshAgeSeconds',
+    sorter: (a, b) => (a.lastSuccessfulRefreshAgeSeconds ?? -1) - (b.lastSuccessfulRefreshAgeSeconds ?? -1),
+    render: (value: number | null | undefined, view) => (
       <Tooltip
         title={
-          value
-            ? 'Completion time of the most recent refresh with SUCCESS status. Pending and skipped attempts do not replace it.'
+          value != null
+            ? `Last successful refresh: ${formatTimestamp(view.lastSuccessfulRefreshFinished)} (cluster time). Elapsed time at the last live update.`
             : 'No successful refresh was found in the available metadata or retained refresh history.'
         }
       >
-        {formatTimestamp(value)}
+        {formatFreshness(value)}
       </Tooltip>
     ),
   },

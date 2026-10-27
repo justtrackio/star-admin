@@ -75,6 +75,13 @@ func (h *HandlerOverview) GetOverview(ctx context.Context) (response httpserver.
 }
 
 func (h *HandlerOverview) GetNodes(ctx context.Context) (httpserver.Response, error) {
+	const frontendHeapQuery = `SELECT FE_ID AS name,
+ MAX(CASE WHEN get_json_string(LABELS, '$.type') = 'used' THEN VALUE END) AS used_bytes,
+ MAX(CASE WHEN get_json_string(LABELS, '$.type') = 'max' THEN VALUE END) AS max_bytes
+ FROM information_schema.fe_metrics
+ WHERE NAME = 'jvm_heap_size_bytes'
+ GROUP BY FE_ID`
+
 	nodes := make([]ClusterNode, 0)
 	var batch []ClusterNode
 	var err error
@@ -162,6 +169,8 @@ func (h *HandlerOverview) readNodes(ctx context.Context, kind, query string) (no
 
 // Column names vary between StarRocks releases. Missing values remain unknown.
 func (h *HandlerOverview) nodeFromMetadata(m map[string]string) ClusterNode {
+	const trueValue = "true"
+
 	var alive *bool
 	if value, err := strconv.ParseBool(m["Alive"]); err == nil {
 		alive = &value
@@ -192,7 +201,7 @@ func (h *HandlerOverview) nodeFromMetadata(m map[string]string) ClusterNode {
 
 	return ClusterNode{
 		ID: id, Host: host, Alive: alive, Role: m["Role"], Details: m,
-		Decommissioned: m["SystemDecommissioned"] == "true" || m["ClusterDecommissioned"] == "true",
+		Decommissioned: m["SystemDecommissioned"] == trueValue || m["ClusterDecommissioned"] == trueValue,
 		Status:         m["StatusCode"], Warehouse: m["WarehouseName"],
 		CPUCores: h.nodeInteger(m["CpuCores"]), MemoryLimit: m["MemLimit"],
 		CPUUsed: m["CpuUsedPct"], MemoryUsed: m["MemUsedPct"],
@@ -218,13 +227,6 @@ type frontendHeapMetrics struct {
 	UsedBytes *int64 `db:"used_bytes"`
 	MaxBytes  *int64 `db:"max_bytes"`
 }
-
-const frontendHeapQuery = `SELECT FE_ID AS name,
- MAX(CASE WHEN get_json_string(LABELS, '$.type') = 'used' THEN VALUE END) AS used_bytes,
- MAX(CASE WHEN get_json_string(LABELS, '$.type') = 'max' THEN VALUE END) AS max_bytes
- FROM information_schema.fe_metrics
- WHERE NAME = 'jvm_heap_size_bytes'
- GROUP BY FE_ID`
 
 func (h *HandlerOverview) applyFrontendHeap(nodes []ClusterNode, metrics []frontendHeapMetrics) {
 	byName := make(map[string]frontendHeapMetrics, len(metrics))

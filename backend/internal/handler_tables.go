@@ -41,28 +41,6 @@ type RoutineLoad struct {
 	TaskConsumeSecond string `json:"taskConsumeSecond" db:"task_consume_second"`
 }
 
-const tablesQuery = `SELECT t.TABLE_SCHEMA AS database_name, t.TABLE_NAME AS name,
- COALESCE(t.ENGINE, '') AS engine, t.TABLE_ROWS AS table_rows, t.DATA_LENGTH AS data_bytes
- FROM information_schema.tables t
- LEFT JOIN information_schema.materialized_views mv
- ON mv.TABLE_SCHEMA = t.TABLE_SCHEMA AND mv.TABLE_NAME = t.TABLE_NAME
- WHERE t.TABLE_TYPE IN ('BASE TABLE', 'TABLE')
- AND t.TABLE_SCHEMA NOT IN ('information_schema', 'sys', '_statistics_')
- AND mv.MATERIALIZED_VIEW_ID IS NULL
- ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME`
-
-const routineLoadsQuery = `SELECT CAST(ID AS CHAR) AS id, DB_NAME AS database_name,
- TABLE_NAME AS table_name, NAME AS name, COALESCE(STATE, '') AS state,
- COALESCE(get_json_string(DATA_SOURCE_PROPERTIES, '$.topic'), '') AS topic,
- COALESCE(get_json_string(STATISTICS, '$.loadedRows'), '') AS loaded_rows,
- COALESCE(get_json_string(STATISTICS, '$.errorRows'), '') AS error_rows,
- COALESCE(get_json_string(STATISTICS, '$.loadRowsRate'), '') AS rows_per_second,
- COALESCE(PROGRESS, '') AS progress, COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason,
- COALESCE(get_json_string(JOB_PROPERTIES, '$.taskConsumeSecond'), '') AS task_consume_second
- FROM information_schema.routine_load_jobs
- WHERE DATA_SOURCE_TYPE = 'KAFKA'
- ORDER BY DB_NAME, TABLE_NAME, NAME, ID`
-
 type TablesResponse struct {
 	Tables []Table `json:"tables"`
 }
@@ -87,6 +65,16 @@ func NewHandlerTables(ctx context.Context, config cfg.Config, logger log.Logger)
 }
 
 func (h *HandlerTables) GetTables(ctx context.Context) (httpserver.Response, error) {
+	const tablesQuery = `SELECT t.TABLE_SCHEMA AS database_name, t.TABLE_NAME AS name,
+ COALESCE(t.ENGINE, '') AS engine, t.TABLE_ROWS AS table_rows, t.DATA_LENGTH AS data_bytes
+ FROM information_schema.tables t
+ LEFT JOIN information_schema.materialized_views mv
+ ON mv.TABLE_SCHEMA = t.TABLE_SCHEMA AND mv.TABLE_NAME = t.TABLE_NAME
+ WHERE t.TABLE_TYPE IN ('BASE TABLE', 'TABLE')
+ AND t.TABLE_SCHEMA NOT IN ('information_schema', 'sys', '_statistics_')
+ AND mv.MATERIALIZED_VIEW_ID IS NULL
+ ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME`
+
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -99,6 +87,18 @@ func (h *HandlerTables) GetTables(ctx context.Context) (httpserver.Response, err
 }
 
 func (h *HandlerTables) GetRoutineLoads(ctx context.Context) (httpserver.Response, error) {
+	const routineLoadsQuery = `SELECT CAST(ID AS CHAR) AS id, DB_NAME AS database_name,
+ TABLE_NAME AS table_name, NAME AS name, COALESCE(STATE, '') AS state,
+ COALESCE(get_json_string(DATA_SOURCE_PROPERTIES, '$.topic'), '') AS topic,
+ COALESCE(get_json_string(STATISTICS, '$.loadedRows'), '') AS loaded_rows,
+ COALESCE(get_json_string(STATISTICS, '$.errorRows'), '') AS error_rows,
+ COALESCE(get_json_string(STATISTICS, '$.loadRowsRate'), '') AS rows_per_second,
+ COALESCE(PROGRESS, '') AS progress, COALESCE(REASONS_OF_STATE_CHANGED, '') AS reason,
+ COALESCE(get_json_string(JOB_PROPERTIES, '$.taskConsumeSecond'), '') AS task_consume_second
+ FROM information_schema.routine_load_jobs
+ WHERE DATA_SOURCE_TYPE = 'KAFKA'
+ ORDER BY DB_NAME, TABLE_NAME, NAME, ID`
+
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -118,8 +118,6 @@ func (h *HandlerTables) WatchRoutineLoads(_ context.Context, request *http.Reque
 	return watchSnapshots(request, writer, h.GetRoutineLoads)
 }
 
-const routineLoadActionPause = "pause"
-
 type RoutineLoadControlInput struct {
 	Database string `uri:"database" binding:"required"`
 	ID       string `uri:"id" binding:"required,numeric"`
@@ -127,6 +125,8 @@ type RoutineLoadControlInput struct {
 }
 
 func (h *HandlerTables) ControlRoutineLoad(ctx context.Context, input *RoutineLoadControlInput) (httpserver.Response, error) {
+	const routineLoadActionPause = "pause"
+
 	recoverOffsets := input.Action == "resume-earliest" || input.Action == "resume-latest"
 	if input.Action != routineLoadActionPause && input.Action != "resume" && !recoverOffsets {
 		return nil, httpserver.NewErrorWithStatus(http.StatusBadRequest, errors.New("unsupported routine action"))

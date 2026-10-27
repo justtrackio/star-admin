@@ -131,18 +131,6 @@ function RootComponent() {
                 title: 'Dictionaries',
               },
               {
-                key: '/materialized-views',
-                icon: collapsed ? (
-                  <Link to="/materialized-views" aria-label="Materialized views">
-                    <AppstoreOutlined />
-                  </Link>
-                ) : (
-                  <AppstoreOutlined />
-                ),
-                label: collapsed ? 'Materialized views' : <Link to="/materialized-views">Materialized views</Link>,
-                title: 'Materialized views',
-              },
-              {
                 key: '/resource-groups',
                 icon: collapsed ? (
                   <Link to="/resource-groups" aria-label="Resource groups">

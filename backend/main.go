@@ -55,6 +55,7 @@ func main() {
 				r.GET("/dictionaries", httpserver.BindSseNR(handler.WatchDictionaries))
 			}))
 			api.HandleWith(httpserver.With(internal.NewHandlerMaterializedViews, func(r *httpserver.Router, handler *internal.HandlerMaterializedViews) {
+				r.POST("/materialized-views/:database/:id/:action", httpserver.Bind(handler.ControlMaterializedView))
 				r.GET("/materialized-views/:database/:id", httpserver.BindSseR(handler.WatchMaterializedView))
 				r.GET("/materialized-views/:database/:id/tasks", httpserver.BindSseR(handler.WatchMaterializedViewTasks))
 				r.GET("/materialized-views", httpserver.BindSseNR(handler.WatchMaterializedViews))

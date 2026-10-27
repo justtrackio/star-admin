@@ -15,6 +15,7 @@ export interface MaterializedView {
   lastRefreshState: string;
   lastRefreshFinished: string;
   lastSuccessfulRefreshFinished: string;
+  lastSuccessfulRefreshAgeSeconds?: number | null;
   lastRefreshDuration: number | null;
   lastRefreshError: string;
   rows: number | null;

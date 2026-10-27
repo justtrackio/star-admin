@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Alert, Button, Card, Descriptions, Result, Space, Spin, Tabs, Tooltip, Typography } from 'antd';
+import { useMutation } from '@tanstack/react-query';
+import { Alert, Button, Card, Descriptions, Popconfirm, Result, Space, Spin, Tabs, Tooltip, Typography } from 'antd';
+import { apiClient } from '../api/client';
+import type { ApiError } from '../api/client';
 import { MaterializedViewTasks } from '../components/MaterializedViewTasks';
 import { useMaterializedView } from '../hooks/useMaterializedViews';
 import { MaterializedViewStatus } from '../components/MaterializedViewStatus';
@@ -11,6 +14,12 @@ function MaterializedViewDetailPage() {
   const { database, id } = Route.useParams();
   const { data, error, isPending, isFetching, refetch } = useMaterializedView(database, id);
   const view = data?.views.find((item) => item.database === database && item.id === id);
+  const control = useMutation<{ action: string }, ApiError, 'pause' | 'resume'>({
+    mutationFn: (action) =>
+      apiClient.post(`/api/materialized-views/${encodeURIComponent(database)}/${encodeURIComponent(id)}/${action}`),
+    onSuccess: refetch,
+  });
+  const controlsDisabled = !!error || control.isPending || isFetching;
 
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
@@ -48,6 +57,44 @@ function MaterializedViewDetailPage() {
             </Typography.Title>
             <Typography.Text type="secondary">{view.database} · Materialized view</Typography.Text>
           </div>
+          {view.refreshType.toUpperCase() === 'ASYNC' && (
+            <Space orientation="vertical">
+              <Space wrap>
+                <Popconfirm
+                  title="Pause refresh and deactivate this view?"
+                  description="This disables refresh and query rewrite. Dependent materialized views may also become inactive and need separate reactivation. The refresh schedule is preserved."
+                  okText="Pause refresh"
+                  onConfirm={() => control.mutate('pause')}
+                  disabled={view.active.toLowerCase() !== 'true' || controlsDisabled}
+                >
+                  <Button
+                    disabled={view.active.toLowerCase() !== 'true' || controlsDisabled}
+                    loading={control.isPending && control.variables === 'pause'}
+                  >
+                    Pause refresh
+                  </Button>
+                </Popconfirm>
+                <Button
+                  type="primary"
+                  disabled={view.active.toLowerCase() !== 'false' || controlsDisabled}
+                  loading={control.isPending && control.variables === 'resume'}
+                  onClick={() => control.mutate('resume')}
+                >
+                  Resume refresh
+                </Button>
+              </Space>
+            </Space>
+          )}
+          {control.error && (
+            <Alert type="error" showIcon title="Could not change refresh state" description={control.error.message} />
+          )}
+          {control.isSuccess && (
+            <Alert
+              type="success"
+              showIcon
+              title={`${control.variables === 'pause' ? 'Pause' : 'Resume'} command accepted. The live snapshot will show the updated state.`}
+            />
+          )}
           {view.inactiveReason && (
             <Alert type="warning" showIcon title="Inactive reason" description={view.inactiveReason} />
           )}
