@@ -27,6 +27,7 @@ func main() {
 		application.WithLoggerHandlersFromConfig,
 		application.WithUTCClock(true),
 		application.WithModuleFactory("starrocks", internal.NewModuleStarRocks),
+		application.WithModuleFactory("local-state", internal.NewModuleLocalState),
 		application.WithModuleFactory("http", httpserver.NewServer("default", func(ctx context.Context, config cfg.Config, logger log.Logger, router *httpserver.Router) error {
 			router.Use(cors.Default())
 			router.UseFactory(httpserver.CreateEmbeddedStaticServe(publicFs, "public", "/api"))
@@ -55,6 +56,7 @@ func main() {
 				r.GET("/dictionaries", httpserver.BindSseNR(handler.WatchDictionaries))
 			}))
 			api.HandleWith(httpserver.With(internal.NewHandlerMaterializedViews, func(r *httpserver.Router, handler *internal.HandlerMaterializedViews) {
+				r.POST("/materialized-views/:database/:id/refresh", httpserver.Bind(handler.RefreshMaterializedView))
 				r.POST("/materialized-views/:database/:id/:action", httpserver.Bind(handler.ControlMaterializedView))
 				r.GET("/materialized-views/:database/:id", httpserver.BindSseR(handler.WatchMaterializedView))
 				r.GET("/materialized-views/:database/:id/tasks", httpserver.BindSseR(handler.WatchMaterializedViewTasks))

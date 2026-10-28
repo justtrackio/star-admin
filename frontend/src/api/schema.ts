@@ -8,6 +8,8 @@ export interface MaterializedView {
   database: string;
   name: string;
   refreshType: string;
+  canResume?: boolean;
+  partitionType?: string;
   refreshTrigger: string;
   refreshPolicy: string;
   active: string;

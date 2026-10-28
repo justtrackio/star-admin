@@ -16,5 +16,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o star-admin .
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=backend-builder /app/star-admin .
+COPY --from=backend-builder /app/build/migrations ./build/migrations
 EXPOSE 8082
 ENTRYPOINT ["./star-admin"]

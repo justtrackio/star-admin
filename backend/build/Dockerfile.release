@@ -3,5 +3,6 @@ FROM gcr.io/distroless/static-debian12:nonroot
 ARG TARGETARCH
 WORKDIR /app
 COPY dist/${TARGETARCH}/star-admin ./star-admin
+COPY backend/build/migrations ./build/migrations
 EXPOSE 8082
 ENTRYPOINT ["./star-admin"]

@@ -4,9 +4,12 @@ import { Alert, Button, Card, Descriptions, Popconfirm, Result, Space, Spin, Tab
 import { apiClient } from '../api/client';
 import type { ApiError } from '../api/client';
 import { MaterializedViewTasks } from '../components/MaterializedViewTasks';
+import { MaterializedViewRefresh } from '../components/MaterializedViewRefresh';
 import { useMaterializedView } from '../hooks/useMaterializedViews';
 import { MaterializedViewStatus } from '../components/MaterializedViewStatus';
 import { formatRefreshSchedule } from '../utils/formatRefreshSchedule';
+import { formatFreshness } from '../utils/formatFreshness';
+import { formatTimestamp } from '../utils/formatTimestamp';
 
 export const Route = createFileRoute('/materialized-views_/$database/$id')({ component: MaterializedViewDetailPage });
 
@@ -23,7 +26,36 @@ function MaterializedViewDetailPage() {
 
   return (
     <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-      <Link to="/materialized-views">← Materialized views</Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <Link to="/materialized-views">← Materialized views</Link>
+          {view && (
+            <div style={{ marginTop: 24 }}>
+              <Typography.Title level={2} style={{ overflowWrap: 'anywhere' }}>
+                {view.name}
+              </Typography.Title>
+              <Typography.Text type="secondary">{view.database} · Materialized view</Typography.Text>
+            </div>
+          )}
+        </div>
+        {view && (
+          <Tooltip
+            title={
+              view.lastSuccessfulRefreshAgeSeconds != null
+                ? `Last successful refresh: ${formatTimestamp(view.lastSuccessfulRefreshFinished)} (cluster time). Elapsed time at the last live update.`
+                : 'No successful refresh was found in the available metadata or retained refresh history.'
+            }
+            trigger={['hover', 'focus']}
+          >
+            <Card size="small" style={{ marginLeft: 'auto', minWidth: 140 }}>
+              <Typography.Text type="secondary" style={{ display: 'block' }}>Data freshness</Typography.Text>
+              <Typography.Text strong tabIndex={0} style={{ fontSize: 24 }}>
+                {formatFreshness(view.lastSuccessfulRefreshAgeSeconds)}
+              </Typography.Text>
+            </Card>
+          </Tooltip>
+        )}
+      </div>
       {isPending && (
         <Spin tip="Loading materialized view">
           <div style={{ height: 160 }} />
@@ -51,37 +83,41 @@ function MaterializedViewDetailPage() {
       )}
       {view && (
         <>
-          <div>
-            <Typography.Title level={2} style={{ overflowWrap: 'anywhere' }}>
-              {view.name}
-            </Typography.Title>
-            <Typography.Text type="secondary">{view.database} · Materialized view</Typography.Text>
-          </div>
           {view.refreshType.toUpperCase() === 'ASYNC' && (
             <Space orientation="vertical">
               <Space wrap>
                 <Popconfirm
-                  title="Pause refresh and deactivate this view?"
-                  description="This disables refresh and query rewrite. Dependent materialized views may also become inactive and need separate reactivation. The refresh schedule is preserved."
+                  title="Pause automatic refresh?"
+                  description="Switch to manual refresh. The view stays active and forced refresh remains available. Resume restores the saved automatic refresh policy. Work already queued or running may still finish."
                   okText="Pause refresh"
                   onConfirm={() => control.mutate('pause')}
-                  disabled={view.active.toLowerCase() !== 'true' || controlsDisabled}
+                  disabled={view.active.toLowerCase() !== 'true' || view.refreshTrigger === 'MANUAL' || controlsDisabled}
                 >
                   <Button
-                    disabled={view.active.toLowerCase() !== 'true' || controlsDisabled}
+                    disabled={view.active.toLowerCase() !== 'true' || view.refreshTrigger === 'MANUAL' || controlsDisabled}
                     loading={control.isPending && control.variables === 'pause'}
                   >
-                    Pause refresh
+                    Pause automatic refresh
                   </Button>
                 </Popconfirm>
                 <Button
                   type="primary"
-                  disabled={view.active.toLowerCase() !== 'false' || controlsDisabled}
+                  disabled={!view.canResume || controlsDisabled}
+                  title={view.refreshTrigger === 'MANUAL' && !view.canResume ? 'Original automatic refresh policy is unavailable.' : undefined}
                   loading={control.isPending && control.variables === 'resume'}
                   onClick={() => control.mutate('resume')}
                 >
-                  Resume refresh
+                  Resume automatic refresh
                 </Button>
+                {['RANGE', 'LIST'].includes(view.partitionType?.toUpperCase() ?? '') && (
+                  <MaterializedViewRefresh
+                    key={JSON.stringify([database, id])}
+                    database={database}
+                    id={id}
+                    disabled={view.active.toLowerCase() !== 'true' || controlsDisabled}
+                    onSuccess={refetch}
+                  />
+                )}
               </Space>
             </Space>
           )}

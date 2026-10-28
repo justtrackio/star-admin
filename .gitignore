@@ -7,3 +7,5 @@
 .env.*
 !.env.example
 /dist/
+
+.star-admin/

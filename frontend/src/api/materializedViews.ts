@@ -23,6 +23,8 @@ function isMaterializedView(value: unknown): value is MaterializedView {
   ];
   return (
     stringFields.every((field) => typeof value[field] === 'string') &&
+    (value.canResume === undefined || typeof value.canResume === 'boolean') &&
+    (value.partitionType === undefined || typeof value.partitionType === 'string') &&
     (value.lastSuccessfulRefreshAgeSeconds == null || typeof value.lastSuccessfulRefreshAgeSeconds === 'number') &&
     (value.rows === null || typeof value.rows === 'number') &&
     (value.lastRefreshDuration === null || typeof value.lastRefreshDuration === 'number')
