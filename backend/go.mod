@@ -5,9 +5,9 @@ go 1.27.1
 require (
 	github.com/gin-contrib/cors v1.7.9
 	github.com/gin-gonic/gin v1.12.0
-	github.com/gosoline-project/httpserver v0.6.4
-	github.com/gosoline-project/sqlc v0.4.0
-	github.com/justtrackio/gosoline v0.66.2
+	github.com/gosoline-project/httpserver v0.6.5
+	github.com/gosoline-project/sqlc v0.5.0
+	github.com/justtrackio/gosoline v0.69.4
 	modernc.org/sqlite v1.29.5
 )
 
@@ -87,7 +87,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.3 // indirect
 	github.com/go-resty/resty/v2 v2.7.1-0.20230308051516-1578007c3c8d // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
